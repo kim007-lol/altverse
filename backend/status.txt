@@ -1,0 +1,54 @@
+ M app/Http/Controllers/Api/V1/AuthController.php
+ M app/Http/Controllers/Api/V1/Author/AnalyticsController.php
+ D app/Http/Controllers/Api/V1/Author/AuManagementController.php
+ M app/Http/Controllers/Api/V1/CommentController.php
+ M app/Http/Controllers/Api/V1/NotificationController.php
+ M app/Http/Controllers/Api/V1/Reader/BookmarkController.php
+ M app/Http/Controllers/Api/V1/Reader/CollectionController.php
+ M app/Http/Controllers/Api/V1/Reader/FollowController.php
+ M app/Http/Controllers/Api/V1/Reader/FypController.php
+ M app/Http/Controllers/Api/V1/Reader/ReadingController.php
+ M app/Http/Controllers/Api/V1/Reader/SearchController.php
+ M app/Http/Controllers/Api/V1/WalletController.php
+ D app/Jobs/ProcessChapterImages.php
+ D app/Models/Au.php
+ D app/Models/Chapter.php
+ D app/Models/ChapterImage.php
+ M app/Models/Collection.php
+ M app/Models/Comment.php
+ M app/Models/Genre.php
+ M app/Models/ReadingHistory.php
+ M app/Models/Transaction.php
+ M app/Models/User.php
+ M app/Models/ViewLog.php
+ M composer.json
+ M composer.lock
+ M database/migrations/2024_01_02_000001_create_content_tables.php
+ M database/migrations/2024_01_02_000002_create_interaction_tables.php
+ M database/migrations/2024_01_02_000003_create_feature_tables.php
+ M database/seeders/DatabaseSeeder.php
+ M routes/api.php
+ M routes/console.php
+ D tests/Feature/ExampleTest.php
+ D tests/TestCase.php
+ D tests/Unit/ExampleTest.php
+?? app/Console/
+?? app/Events/
+?? app/Http/Controllers/Api/V1/Author/EpisodeController.php
+?? app/Http/Controllers/Api/V1/Author/PageController.php
+?? app/Http/Controllers/Api/V1/Author/SeriesController.php
+?? app/Http/Controllers/Api/V1/Reader/EpisodeUnlockController.php
+?? app/Jobs/DeleteOldImageJob.php
+?? app/Jobs/RecalculateAuthorTierJob.php
+?? app/Models/Episode.php
+?? app/Models/Page.php
+?? app/Models/Series.php
+?? database/migrations/2026_03_01_120349_create_au_projects_table.php
+?? database/migrations/2026_03_01_133150_create_analytics_daily_table.php
+?? database/migrations/2026_03_01_140914_add_tier_stats_to_users_table.php
+?? database/migrations/2026_03_01_140917_create_author_tier_histories_table.php
+?? database/migrations/2026_03_01_200000_create_user_episode_unlocks_table.php
+?? database/migrations/2026_03_03_000001_add_target_role_to_notifications.php
+?? database/seeders/UserSeeder.php
+?? git_status.txt
+?? status.txt
