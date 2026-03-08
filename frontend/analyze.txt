@@ -1,0 +1,13 @@
+﻿Analyzing frontend...                                           
+
+   info - Unnecessary use of multiple underscores - lib\features\reader\screens\author_profile_screen.dart:271:44 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\reader\screens\author_profile_screen.dart:271:48 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\reader\screens\reader_profile_screen.dart:302:44 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\reader\screens\reader_profile_screen.dart:302:48 - unnecessary_underscores
+   info - 'Share' is deprecated and shouldn't be used. Use SharePlus instead - lib\features\reader\screens\series_detail_screen.dart:294:5 - deprecated_member_use
+   info - 'share' is deprecated and shouldn't be used. Use SharePlus.instance.share() instead - lib\features\reader\screens\series_detail_screen.dart:294:11 - deprecated_member_use
+   info - The local variable '_2' starts with an underscore - lib\features\reader\widgets\comment_drawer.dart:247:47 - no_leading_underscores_for_local_identifiers
+   info - The variable name '_2' isn't a lowerCamelCase identifier - lib\features\reader\widgets\comment_drawer.dart:247:47 - non_constant_identifier_names
+   info - Unnecessary use of multiple underscores - lib\features\reader\widgets\comment_drawer.dart:329:64 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\reader\widgets\comment_drawer.dart:329:68 - unnecessary_underscores
+

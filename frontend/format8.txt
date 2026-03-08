@@ -1,0 +1,106 @@
+﻿dart : Could not 
+format because the 
+source could not be 
+parsed:
+At line:1 char:1
++ dart format lib/feat
+ures/reader/screens/au
+thor_profile_screen.da
+rt >  ...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (Could not    
+ forma... not be p    
+arsed::String) []    
+, RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+
+line 590, column 11 
+of lib\features\reader
+\screens\author_profil
+e_screen.dart: 
+Expected to find ']'.
+    Γò╖
+590 Γöé           ),
+    Γöé           ^
+    Γò╡
+line 615, column 9 of 
+lib\features\reader\sc
+reens\author_profile_s
+creen.dart: Expected 
+an identifier.
+    Γò╖
+615 Γöé         ],
+    Γöé         ^
+    Γò╡
+line 615, column 9 of 
+lib\features\reader\sc
+reens\author_profile_s
+creen.dart: Expected 
+to find ')'.
+    Γò╖
+615 Γöé         ],
+    Γöé         ^
+    Γò╡
+line 624, column 7 of 
+lib\features\reader\sc
+reens\author_profile_s
+creen.dart: Expected 
+to find ';'.
+    Γò╖
+624 Γöé       ),
+    Γöé       ^
+    Γò╡
+line 624, column 8 of 
+lib\features\reader\sc
+reens\author_profile_s
+creen.dart: Expected 
+an identifier.
+    Γò╖
+624 Γöé       ),
+    Γöé        ^
+    Γò╡
+line 624, column 8 of 
+lib\features\reader\sc
+reens\author_profile_s
+creen.dart: 
+Unexpected text ';'.
+    Γò╖
+624 Γöé       ),
+    Γöé        ^
+    Γò╡
+line 625, column 5 of 
+lib\features\reader\sc
+reens\author_profile_s
+creen.dart: Expected 
+an identifier.
+    Γò╖
+625 Γöé     );
+    Γöé     ^
+    Γò╡
+line 624, column 8 of 
+lib\features\reader\sc
+reens\author_profile_s
+creen.dart: Expected 
+to find ';'.
+    Γò╖
+624 Γöé       ),
+    Γöé        ^
+    Γò╡
+line 625, column 5 of 
+lib\features\reader\sc
+reens\author_profile_s
+creen.dart: 
+Unexpected text ';'.
+    Γò╖
+625 Γöé     );
+    Γöé     ^
+    Γò╡
+Formatted no files in 0.02 seconds.

@@ -1,0 +1,75 @@
+﻿Analyzing frontend...                                           
+
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\profile_screen.dart:27:63 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\profile_screen.dart:66:84 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\register_screen.dart:206:39 - deprecated_member_use
+   info - The private field _selectedImages could be 'final' - lib\features\author\screens\chapter_management_screen.dart:14:16 - prefer_final_fields
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\author\screens\chapter_management_screen.dart:65:57 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\author\screens\chapter_management_screen.dart:129:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\author\screens\dashboard_screen.dart:50:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\author\screens\dashboard_screen.dart:52:66 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\author\screens\dashboard_screen.dart:96:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\author\screens\dashboard_screen.dart:121:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\author\screens\dashboard_screen.dart:141:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\author\screens\upload_au_screen.dart:42:59 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\gamification\screens\daily_reward_screen.dart:41:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\gamification\screens\daily_reward_screen.dart:43:66 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\gamification\screens\daily_reward_screen.dart:92:31 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\gamification\screens\daily_reward_screen.dart:100:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\gamification\screens\daily_reward_screen.dart:103:79 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\gamification\screens\daily_reward_screen.dart:144:29 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\gamification\screens\daily_reward_screen.dart:154:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\gamification\screens\wallet_screen.dart:48:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\gamification\screens\wallet_screen.dart:98:61 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\gamification\screens\wallet_screen.dart:101:55 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\gamification\screens\wallet_screen.dart:142:29 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\gamification\screens\wallet_screen.dart:150:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\gamification\screens\wallet_screen.dart:157:50 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\gamification\screens\wallet_screen.dart:157:80 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\reader\screens\following_screen.dart:15:31 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\reader\screens\following_screen.dart:22:58 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\reader\screens\home_screen.dart:66:31 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\reader\screens\home_screen.dart:74:47 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\reader\screens\home_screen.dart:123:31 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\reader\screens\home_screen.dart:136:55 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\reader\screens\home_screen.dart:160:29 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\reader\screens\home_screen.dart:166:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\reader\screens\home_screen.dart:197:79 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\reader\screens\home_screen.dart:204:79 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\reader\screens\library_screen.dart:60:29 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\reader\screens\library_screen.dart:66:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\reader\screens\reading_screen.dart:60:82 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\reader\screens\reading_screen.dart:82:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\reader\screens\reading_screen.dart:109:54 - deprecated_member_use
+   info - The private field _selectedGenres could be 'final' - lib\features\reader\screens\search_screen.dart:19:15 - prefer_final_fields
+   info - Unnecessary use of multiple underscores - lib\features\reader\screens\search_screen.dart:70:37 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\reader\screens\search_screen.dart:102:37 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\reader\screens\search_screen.dart:121:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\reader\screens\search_screen.dart:130:52 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\shared\screens\notification_screen.dart:18:31 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\shared\screens\notification_screen.dart:67:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\shared\screens\notification_screen.dart:69:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\shared\screens\notification_screen.dart:69:83 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\shared\screens\notification_screen.dart:70:69 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\shared\screens\notification_screen.dart:77:53 - deprecated_member_use
+   info - The local variable '_reasonCtrl' starts with an underscore - lib\features\shared\widgets\report_dialog.dart:9:15 - no_leading_underscores_for_local_identifiers
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\shared\widgets\report_dialog.dart:73:7 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\shared\widgets\report_dialog.dart:74:7 - deprecated_member_use
+warning - Unused import: 'package:provider/provider.dart' - lib\main.dart:2:8 - unused_import
+
+flutter : 56 issues 
+found. (ran in 18.5s)
+At line:1 char:1
++ flutter analyze > 
+analyze_output.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (56 
+issu    es found. (ran in 
+18.5s)    :String) [], 
+RemoteExcep    tion
+    + 
+FullyQualifiedErrorId     
+: NativeCommandError
+ 

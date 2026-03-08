@@ -1,0 +1,1242 @@
+﻿[ +196 ms] Artifact Instance of 'MaterialFonts' is not required, skipping update.
+[        ] Artifact Instance of 'GradleWrapper' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterSdk' is not required, skipping update.
+[        ] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FontSubsetArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'PubDependencies' is not required, skipping update.
+[        ] executing: [C:\flutter/] git -c log.showSignature=false log HEAD -n 1 --pretty=format:%ad --date=iso
+[  +75 ms] Exit code 0 from: git -c log.showSignature=false log HEAD -n 1 --pretty=format:%ad --date=iso
+[        ] 2026-02-18 13:54:59 -0800
+[  +35 ms] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterEngineStamp' is not required, skipping update.
+[        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[   +2 ms] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[  +63 ms] executing: C:\flutter\platform-tools\adb.exe devices -l
+[  +93 ms] List of devices attached
+[   +4 ms] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterEngineStamp' is not required, skipping update.
+[   +4 ms] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[  +41 ms] Skipping pub get: version match.
+[  +60 ms] Found plugin shared_preferences at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences-2.5.4\
+[   +5 ms] Found plugin shared_preferences_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_windows-2.4.1\
+[   +5 ms] Found plugin path_provider_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_windows-2.3.0\
+[   +5 ms] Found plugin shared_preferences_web at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_web-2.4.3\
+[   +3 ms] Found plugin shared_preferences_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_linux-2.4.1\
+[   +4 ms] Found plugin path_provider_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_linux-2.2.1\
+[   +3 ms] Found plugin shared_preferences_foundation at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_foundation-2.5.6\
+[   +3 ms] Found plugin shared_preferences_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_android-2.4.20\
+[   +6 ms] Found plugin path_provider at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider-2.1.5\
+[   +2 ms] Found plugin path_provider_foundation at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_foundation-2.6.0\
+[  +13 ms] Found plugin path_provider_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_android-2.2.22\
+[   +1 ms] Found plugin image_picker at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker-1.2.1\
+[   +1 ms] Found plugin image_picker_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_windows-0.2.2\
+[   +7 ms] Found plugin file_selector_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_windows-0.9.3+5\
+[   +3 ms] Found plugin image_picker_macos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_macos-0.2.2+1\
+[   +1 ms] Found plugin file_selector_macos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_macos-0.9.5\
+[   +1 ms] Found plugin image_picker_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_linux-0.2.2\
+[   +1 ms] Found plugin file_selector_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_linux-0.9.4\
+[   +1 ms] Found plugin image_picker_ios at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_ios-0.8.13+6\
+[   +1 ms] Found plugin image_picker_for_web at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_for_web-3.1.1\
+[   +2 ms] Found plugin image_picker_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.13+14\
+[   +1 ms] Found plugin flutter_plugin_android_lifecycle at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.33\
+[   +3 ms] Found plugin flutter_image_compress at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress-2.4.0\
+[   +1 ms] Found plugin flutter_image_compress_web at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_web-0.1.5\
+[   +2 ms] Found plugin flutter_image_compress_ohos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_ohos-0.0.3\
+[        ] Found plugin flutter_image_compress_macos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_macos-1.0.3\
+[   +1 ms] Found plugin flutter_image_compress_common at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_common-1.0.6\
+[  +11 ms] Found plugin sqflite at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite-2.4.2\
+[   +5 ms] Found plugin sqflite_darwin at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite_darwin-2.4.2\
+[   +1 ms] Found plugin sqflite_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite_android-2.4.2+2\
+[  +43 ms] Found plugin shared_preferences at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences-2.5.4\
+[   +1 ms] Found plugin shared_preferences_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_windows-2.4.1\
+[   +2 ms] Found plugin path_provider_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_windows-2.3.0\
+[   +3 ms] Found plugin shared_preferences_web at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_web-2.4.3\
+[   +2 ms] Found plugin shared_preferences_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_linux-2.4.1\
+[        ] Found plugin path_provider_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_linux-2.2.1\
+[   +1 ms] Found plugin shared_preferences_foundation at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_foundation-2.5.6\
+[        ] Found plugin shared_preferences_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_android-2.4.20\
+[   +2 ms] Found plugin path_provider at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider-2.1.5\
+[        ] Found plugin path_provider_foundation at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_foundation-2.6.0\
+[   +7 ms] Found plugin path_provider_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_android-2.2.22\
+[        ] Found plugin image_picker at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker-1.2.1\
+[        ] Found plugin image_picker_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_windows-0.2.2\
+[   +3 ms] Found plugin file_selector_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_windows-0.9.3+5\
+[   +1 ms] Found plugin image_picker_macos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_macos-0.2.2+1\
+[        ] Found plugin file_selector_macos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_macos-0.9.5\
+[        ] Found plugin image_picker_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_linux-0.2.2\
+[   +1 ms] Found plugin file_selector_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_linux-0.9.4\
+[        ] Found plugin image_picker_ios at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_ios-0.8.13+6\
+[   +1 ms] Found plugin image_picker_for_web at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_for_web-3.1.1\
+[   +1 ms] Found plugin image_picker_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.13+14\
+[        ] Found plugin flutter_plugin_android_lifecycle at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.33\
+[   +1 ms] Found plugin flutter_image_compress at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress-2.4.0\
+[        ] Found plugin flutter_image_compress_web at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_web-0.1.5\
+[   +1 ms] Found plugin flutter_image_compress_ohos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_ohos-0.0.3\
+[        ] Found plugin flutter_image_compress_macos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_macos-1.0.3\
+[        ] Found plugin flutter_image_compress_common at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_common-1.0.6\
+[   +6 ms] Found plugin sqflite at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite-2.4.2\
+[   +3 ms] Found plugin sqflite_darwin at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite_darwin-2.4.2\
+[   +1 ms] Found plugin sqflite_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite_android-2.4.2+2\
+[   +6 ms] Generating D:\AU_Reader_V2\frontend\android\app\src\main\java\io\flutter\plugins\GeneratedPluginRegistrant.java
+[   +9 ms] Skipping generating GeneratedPluginRegistrant.java because it is up-to-date.
+[   +4 ms] Skipping generating generated_plugin_registrant.h because it is up-to-date.
+[        ] Skipping generating generated_plugin_registrant.cc because it is up-to-date.
+[   +1 ms] Skipping generating generated_plugins.cmake because it is up-to-date.
+[   +1 ms] Skipping generating GeneratedPluginRegistrant.h because it is up-to-date.
+[   +1 ms] Skipping generating GeneratedPluginRegistrant.m because it is up-to-date.
+[ +105 ms] Initializing file store
+[   +9 ms] Skipping target: gen_localizations
+[   +2 ms] gen_dart_plugin_registrant: Starting due to {InvalidatedReasonKind.inputChanged: The following inputs have updated contents: D:\AU_Reader_V2\frontend\.dart_tool\package_config.json,D:\AU_Reader_V2\frontend\.dart_tool\flutter_build\dart_plugin_registrant.dart}
+[  +31 ms] Found plugin shared_preferences at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences-2.5.4\
+[        ] Found plugin shared_preferences_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_windows-2.4.1\
+[   +1 ms] Found plugin path_provider_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_windows-2.3.0\
+[   +2 ms] Found plugin shared_preferences_web at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_web-2.4.3\
+[   +2 ms] Found plugin shared_preferences_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_linux-2.4.1\
+[        ] Found plugin path_provider_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_linux-2.2.1\
+[   +1 ms] Found plugin shared_preferences_foundation at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_foundation-2.5.6\
+[        ] Found plugin shared_preferences_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_android-2.4.20\
+[   +1 ms] Found plugin path_provider at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider-2.1.5\
+[        ] Found plugin path_provider_foundation at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_foundation-2.6.0\
+[   +6 ms] Found plugin path_provider_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_android-2.2.22\
+[   +2 ms] Found plugin image_picker at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker-1.2.1\
+[   +1 ms] Found plugin image_picker_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_windows-0.2.2\
+[   +3 ms] Found plugin file_selector_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_windows-0.9.3+5\
+[   +1 ms] Found plugin image_picker_macos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_macos-0.2.2+1\
+[   +1 ms] Found plugin file_selector_macos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_macos-0.9.5\
+[        ] Found plugin image_picker_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_linux-0.2.2\
+[        ] Found plugin file_selector_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_linux-0.9.4\
+[   +1 ms] Found plugin image_picker_ios at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_ios-0.8.13+6\
+[        ] Found plugin image_picker_for_web at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_for_web-3.1.1\
+[   +2 ms] Found plugin image_picker_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.13+14\
+[   +1 ms] Found plugin flutter_plugin_android_lifecycle at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.33\
+[   +2 ms] Found plugin flutter_image_compress at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress-2.4.0\
+[        ] Found plugin flutter_image_compress_web at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_web-0.1.5\
+[   +1 ms] Found plugin flutter_image_compress_ohos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_ohos-0.0.3\
+[        ] Found plugin flutter_image_compress_macos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_macos-1.0.3\
+[        ] Found plugin flutter_image_compress_common at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_common-1.0.6\
+[   +8 ms] Found plugin sqflite at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite-2.4.2\
+[   +2 ms] Found plugin sqflite_darwin at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite_darwin-2.4.2\
+[        ] Found plugin sqflite_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite_android-2.4.2+2\
+[   +7 ms] Skipping generating dart_plugin_registrant.dart because it is up-to-date.
+[        ] gen_dart_plugin_registrant: Complete
+[   +1 ms] Skipping target: _composite
+[   +1 ms] complete
+[   +3 ms] Launching lib\main.dart on Windows in debug mode...
+[   +2 ms] C:\flutter\bin\cache\dart-sdk\bin\dartaotruntime.exe C:\flutter\bin\cache\dart-sdk\bin\snapshots\frontend_server_aot.dart.snapshot --sdk-root C:\flutter\bin\cache\artifacts\engine\common\flutter_patched_sdk/ --incremental --target=flutter --experimental-emit-debug-metadata -DFLUTTER_VERSION=3.41.2 -DFLUTTER_CHANNEL=stable -DFLUTTER_GIT_URL=https://github.com/flutter/flutter.git -DFLUTTER_FRAMEWORK_REVISION=90673a4eef -DFLUTTER_ENGINE_REVISION=6c0baaebf7 -DFLUTTER_DART_VERSION=3.11.0 --output-dill C:\Users\him\AppData\Local\Temp\flutter_tools.9c99bc5\flutter_tool.b7448403\app.dill --packages D:\AU_Reader_V2\frontend\.dart_tool\package_config.json -Ddart.vm.profile=false -Ddart.vm.product=false --enable-asserts --track-widget-creation --filesystem-scheme org-dartlang-root --initialize-from-dill build\6f4a15e49d0bc622ec76656f5f470141.cache.dill.track.dill --source file:///D:/AU_Reader_V2/frontend/.dart_tool/flutter_build/dart_plugin_registrant.dart --source package:flutter/src/dart_plugin_registrant.dart -Dflutter.dart_plugin_registrant=file:///D:/AU_Reader_V2/frontend/.dart_tool/flutter_build/dart_plugin_registrant.dart --verbosity=error --enable-experiment=alternative-invalidation-strategy
+[  +22 ms] executing: C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe -format json -products * -utf8 -latest -version 16 -requires Microsoft.VisualStudio.Workload.NativeDesktop Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project
+[  +62 ms] Exit code 0 from: C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe -format json -products * -utf8 -latest -version 16 -requires Microsoft.VisualStudio.Workload.NativeDesktop Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project
+[        ] []
+[        ] executing: C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe -format json -products * -utf8 -latest -version 16 -requires Microsoft.VisualStudio.Workload.VCTools Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project
+[  +40 ms] Exit code 0 from: C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe -format json -products * -utf8 -latest -version 16 -requires Microsoft.VisualStudio.Workload.VCTools Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project
+[        ] [
+             {
+               "instanceId": "f3a70acf",
+               "installDate": "2026-02-05T14:29:07Z",
+               "installationName": "VisualStudio/17.14.25+36915.13.-january.2026-",
+               "installationPath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools",
+               "installationVersion": "17.14.36915.13",
+               "productId": "Microsoft.VisualStudio.Product.BuildTools",
+               "productPath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\Common7\\Tools\\LaunchDevCmd.bat",
+               "state": 4294967295,
+               "isComplete": true,
+               "isLaunchable": true,
+               "isPrerelease": false,
+               "isRebootRequired": false,
+               "displayName": "Visual Studio Build Tools 2022",
+               "description": "The Visual Studio Build Tools allows you to build native and managed MSBuild-based applications without requiring the Visual Studio IDE. There are options to install the Visual C++ compilers and libraries, MFC, ATL, and C++/CLI support.",
+               "channelId": "VisualStudio.17.Release",
+               "channelUri": "https://aka.ms/vs/17/release/channel",
+               "enginePath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\resources\\app\\ServiceHub\\Services\\Microsoft.VisualStudio.Setup.Service",
+               "installedChannelId": "VisualStudio.17.Release",
+               "installedChannelUri": "https://aka.ms/vs/17/release/channel",
+               "releaseNotes": "https://docs.microsoft.com/en-us/visualstudio/releases/2022/release-notes-v17.14#17.14.25",
+               "resolvedInstallationPath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools",
+               "thirdPartyNotices": "https://go.microsoft.com/fwlink/?LinkId=661288",
+               "updateDate": "2026-02-05T14:29:07.4786738Z",
+               "catalog": {
+                 "buildBranch": "d17.14",
+                 "buildVersion": "17.14.36915.13",
+                 "id": "VisualStudio/17.14.25+36915.13.-january.2026-",
+                 "localBuild": "build-lab",
+                 "manifestName": "VisualStudio",
+                 "manifestType": "installer",
+                 "productDisplayVersion": "17.14.25 (January 2026)",
+                 "productLine": "Dev17",
+                 "productLineVersion": "2022",
+                 "productMilestone": "RTW",
+                 "productMilestoneIsPreRelease": "False",
+                 "productName": "Visual Studio",
+                 "productPatchVersion": "25",
+                 "productPreReleaseMilestoneSuffix": "1.0",
+                 "productReleaseNameSuffix": "(January 2026)",
+                 "productSemanticVersion": "17.14.25+36915.13.-january.2026-",
+                 "requiredEngineVersion": "3.14.2086.54749"
+               },
+               "properties": {
+                 "appLocalWPF": "true",
+                 "campaignId": "",
+                 "channelManifestId": "VisualStudio.17.Release/17.14.25+36915.13.-january.2026-",
+                 "includeRecommended": "0",
+                 "nickname": "",
+                 "setupEngineFilePath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe"
+               }
+             }
+           ]
+[   +3 ms] Building Windows application...
+[  +12 ms] <- compile package:au_reader/main.dart
+[  +86 ms] executing: C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe -S D:\AU_Reader_V2\frontend\windows -B D:\AU_Reader_V2\frontend\build\windows\x64 -G Visual Studio 17 2022 -A x64 -DFLUTTER_TARGET_PLATFORM=windows-x64
+[ +179 ms] -- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
+[+6308 ms] -- The CXX compiler identification is MSVC 19.44.35222.0
+[  +66 ms] -- Detecting CXX compiler ABI info
+[+1023 ms] -- Detecting CXX compiler ABI info - done
+[  +23 ms] -- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+[   +1 ms] -- Detecting CXX compile features
+[   +1 ms] -- Detecting CXX compile features - done
+[  +16 ms] -- Configuring done (7.5s)
+[  +78 ms] -- Generating done (0.1s)
+[   +1 ms] -- Build files have been written to: D:/AU_Reader_V2/frontend/build/windows/x64
+[  +31 ms] executing: C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe --build D:\AU_Reader_V2\frontend\build\windows\x64 --config Debug --target INSTALL --verbose
+[  +61 ms] Change Dir: 'D:/AU_Reader_V2/frontend/build/windows/x64'
+[        ] Run Build Command(s): "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/amd64/MSBuild.exe" INSTALL.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+[  +68 ms] MSBuild version 17.14.40+3e7442088 for .NET Framework
+[  +38 ms] Build started 3/1/2026 12:41:33 PM.
+[ +186 ms] Project "D:\AU_Reader_V2\frontend\build\windows\x64\INSTALL.vcxproj" on node 1 (default targets).
+[        ] Project "D:\AU_Reader_V2\frontend\build\windows\x64\INSTALL.vcxproj" (1) is building "D:\AU_Reader_V2\frontend\build\windows\x64\ZERO_CHECK.vcxproj" (2) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Creating directory "x64\Debug\ZERO_CHECK\".
+[   +5 ms]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[        ]   Creating directory "x64\Debug\ZERO_CHECK\ZERO_CHECK.tlog\".
+[   +2 ms] InitializeBuildStatus:
+[        ]   Creating "x64\Debug\ZERO_CHECK\ZERO_CHECK.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "x64\Debug\ZERO_CHECK\ZERO_CHECK.tlog\unsuccessfulbuild".
+[ +102 ms] CustomBuild:
+[        ]   1>Checking Build System
+[  +85 ms] FinalizeBuildStatus:
+[        ]   Deleting file "x64\Debug\ZERO_CHECK\ZERO_CHECK.tlog\unsuccessfulbuild".
+[        ]   Touching "x64\Debug\ZERO_CHECK\ZERO_CHECK.tlog\ZERO_CHECK.lastbuildstate".
+[        ] Done Building Project "D:\AU_Reader_V2\frontend\build\windows\x64\ZERO_CHECK.vcxproj" (default targets).
+[ +119 ms] Project "D:\AU_Reader_V2\frontend\build\windows\x64\INSTALL.vcxproj" (1) is building "D:\AU_Reader_V2\frontend\build\windows\x64\ALL_BUILD.vcxproj" (3) on node 1 (default targets).
+[        ] Project "D:\AU_Reader_V2\frontend\build\windows\x64\ALL_BUILD.vcxproj" (3) is building "D:\AU_Reader_V2\frontend\build\windows\x64\runner\au_reader.vcxproj" (4) on node 1 (default targets).
+[        ] Project "D:\AU_Reader_V2\frontend\build\windows\x64\runner\au_reader.vcxproj" (4) is building "D:\AU_Reader_V2\frontend\build\windows\x64\flutter\flutter_assemble.vcxproj" (5) on node 1 (default targets).
+[        ] PrepareForBuild:
+[        ]   Creating directory "x64\Debug\flutter_assemble\".
+[        ]   Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+[        ]   Creating directory "x64\Debug\flutter_assemble\flutter_assemble.tlog\".
+[   +1 ms] InitializeBuildStatus:
+[        ]   Creating "x64\Debug\flutter_assemble\flutter_assemble.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+[        ]   Touching "x64\Debug\flutter_assemble\flutter_assemble.tlog\unsuccessfulbuild".
+[        ] ComputeCustomBuildOutput:
+[        ]   Creating directory "D:\AU_Reader_V2\frontend\windows\flutter\ephemeral\cpp_client_wrapper\".
+[   +1 ms] CustomBuild:
+[        ]   "The build of 'D:\AU_Reader_V2\frontend\build\windows\x64\CMakeFiles\bd79e6dae236647885a5e0254153f518\flutter_assemble.rule' depends on 'D:\AU_READER_V2\FRONTEND\WINDOWS\FLUTTER\EPHEMERAL\FLUTTER_WINDOWS.DLL' which is produced by the build of 'D:\AU_Reader_V2\frontend\build\windows\x64\CMakeFiles\76d47aefff40db7b7a3eda15b6fdc177\flutter_windows.dll.rule'. The items cannot be built in parallel."
+[  +50 ms]   Generating D:/AU_Reader_V2/frontend/windows/flutter/ephemeral/flutter_windows.dll, D:/AU_Reader_V2/frontend/windows/flutter/ephemeral/flutter_export.h, D:/AU_Reader_V2/frontend/windows/flutter/ephemeral/flutter_windows.h, D:/AU_Reader_V2/frontend/windows/flutter/ephemeral/flutter_messenger.h, D:/AU_Reader_V2/frontend/windows/flutter/ephemeral/flutter_plugin_registrar.h, D:/AU_Reader_V2/frontend/windows/flutter/ephemeral/flutter_texture_registrar.h, D:/AU_Reader_V2/frontend/windows/flutter/ephemeral/cpp_client_wrapper/core_implementations.cc, D:/AU_Reader_V2/frontend/windows/flutter/ephemeral/cpp_client_wrapper/standard_codec.cc, D:/AU_Reader_V2/frontend/windows/flutter/ephemeral/cpp_client_wrapper/plugin_registrar.cc, D:/AU_Reader_V2/frontend/windows/flutter/ephemeral/cpp_client_wrapper/flutter_engine.cc, D:/AU_Reader_V2/frontend/windows/flutter/ephemeral/cpp_client_wrapper/flutter_view_controller.cc, _phony_
+[+1722 ms]   [ +178 ms] Artifact Instance of 'MaterialFonts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'GradleWrapper' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterSdk' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FontSubsetArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'PubDependencies' is not required, skipping update.
+[   +2 ms]   [   +9 ms] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterEngineStamp' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[   +1 ms]   [   +1 ms] Artifact Instance of 'WindowsEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[  +57 ms]   [  +57 ms] Artifact Instance of 'MaterialFonts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'GradleWrapper' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'AndroidGenSnapshotArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'AndroidInternalBuildArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IOSEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterWebSdk' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterEngineStamp' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LegacyCanvasKitRemover' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterSdk' is not required, skipping update.
+[   +2 ms]   [   +2 ms] Artifact Instance of 'MacOSEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LinuxEngineArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'LinuxFuchsiaSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'MacOSFuchsiaSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterRunnerSDKArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FlutterRunnerDebugSymbols' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'IosUsbArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'FontSubsetArtifacts' is not required, skipping update.
+[        ]   [        ] Artifact Instance of 'PubDependencies' is not required, skipping update.
+[  +27 ms]   [  +26 ms] Initializing file store
+[  +23 ms]   [  +23 ms] dart_build: Starting due to {}
+[   +1 ms]   [   +1 ms] Skipping target: gen_localizations
+[   +2 ms]   [   +2 ms] gen_dart_plugin_registrant: Starting due to {InvalidatedReasonKind.outputSetAddition: The following outputs were added to the output set: D:\AU_Reader_V2\frontend\.dart_tool\flutter_build\dart_plugin_registrant.dart, InvalidatedReasonKind.inputChanged: The following inputs have updated contents: D:\AU_Reader_V2\frontend\.dart_tool\package_config.json}
+[   +2 ms]   [   +2 ms] unpack_windows: Starting due to {}
+[+1909 ms]   [+1909 ms] unpack_windows: Complete
+[+2638 ms]   [+2638 ms] Found plugin shared_preferences at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences-2.5.4\
+[   +5 ms]   [   +5 ms] Found plugin shared_preferences_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_windows-2.4.1\
+[  +10 ms]   [  +10 ms] Found plugin path_provider_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_windows-2.3.0\
+[  +34 ms]   [  +35 ms] Found plugin shared_preferences_web at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_web-2.4.3\
+[   +3 ms]   [   +3 ms] Found plugin shared_preferences_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_linux-2.4.1\
+[   +2 ms]   [   +2 ms] Found plugin path_provider_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_linux-2.2.1\
+[   +3 ms]   [   +3 ms] Found plugin shared_preferences_foundation at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_foundation-2.5.6\
+[   +3 ms]   [   +3 ms] Found plugin shared_preferences_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_android-2.4.20\
+[   +6 ms]   [   +6 ms] Found plugin path_provider at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider-2.1.5\
+[   +1 ms]   [   +2 ms] Found plugin path_provider_foundation at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_foundation-2.6.0\
+[  +14 ms]   [  +13 ms] executing: C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe -format json -products * -utf8 -latest -version 16 -requires Microsoft.VisualStudio.Workload.NativeDesktop Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project
+[  +60 ms]   [  +60 ms] Exit code 0 from: C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe -format json -products * -utf8 -latest -version 16 -requires Microsoft.VisualStudio.Workload.NativeDesktop Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project
+[        ]   [        ] []
+[   +1 ms]   [        ] executing: C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe -format json -products * -utf8 -latest -version 16 -requires Microsoft.VisualStudio.Workload.VCTools Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project
+[  +43 ms]   [  +43 ms] Exit code 0 from: C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe -format json -products * -utf8 -latest -version 16 -requires Microsoft.VisualStudio.Workload.VCTools Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project
+[        ]   [        ] [
+[        ]                {
+[        ]                  "instanceId": "f3a70acf",
+[        ]                  "installDate": "2026-02-05T14:29:07Z",
+[        ]                  "installationName": "VisualStudio/17.14.25+36915.13.-january.2026-",
+[        ]                  "installationPath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools",
+[        ]                  "installationVersion": "17.14.36915.13",
+[        ]                  "productId": "Microsoft.VisualStudio.Product.BuildTools",
+[        ]                  "productPath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\Common7\\Tools\\LaunchDevCmd.bat",
+[        ]                  "state": 4294967295,
+[        ]                  "isComplete": true,
+[        ]                  "isLaunchable": true,
+[        ]                  "isPrerelease": false,
+[        ]                  "isRebootRequired": false,
+[        ]                  "displayName": "Visual Studio Build Tools 2022",
+[        ]                  "description": "The Visual Studio Build Tools allows you to build native and managed MSBuild-based applications without requiring the Visual Studio IDE. There are options to install the Visual C++ compilers and libraries, MFC, ATL, and C++/CLI support.",
+[        ]                  "channelId": "VisualStudio.17.Release",
+[        ]                  "channelUri": "https://aka.ms/vs/17/release/channel",
+[        ]                  "enginePath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\resources\\app\\ServiceHub\\Services\\Microsoft.VisualStudio.Setup.Service",
+[        ]                  "installedChannelId": "VisualStudio.17.Release",
+[        ]                  "installedChannelUri": "https://aka.ms/vs/17/release/channel",
+[        ]                  "releaseNotes": "https://docs.microsoft.com/en-us/visualstudio/releases/2022/release-notes-v17.14#17.14.25",
+[        ]                  "resolvedInstallationPath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools",
+[  +18 ms]                  "thirdPartyNotices": "https://go.microsoft.com/fwlink/?LinkId=661288",
+[        ]                  "updateDate": "2026-02-05T14:29:07.4786738Z",
+[        ]                  "catalog": {
+[        ]                    "buildBranch": "d17.14",
+[        ]                    "buildVersion": "17.14.36915.13",
+[        ]                    "id": "VisualStudio/17.14.25+36915.13.-january.2026-",
+[        ]                    "localBuild": "build-lab",
+[        ]                    "manifestName": "VisualStudio",
+[        ]                    "manifestType": "installer",
+[        ]                    "productDisplayVersion": "17.14.25 (January 2026)",
+[        ]                    "productLine": "Dev17",
+[        ]                    "productLineVersion": "2022",
+[        ]                    "productMilestone": "RTW",
+[        ]                    "productMilestoneIsPreRelease": "False",
+[        ]                    "productName": "Visual Studio",
+[        ]                    "productPatchVersion": "25",
+[        ]                    "productPreReleaseMilestoneSuffix": "1.0",
+[        ]                    "productReleaseNameSuffix": "(January 2026)",
+[        ]                    "productSemanticVersion": "17.14.25+36915.13.-january.2026-",
+[        ]                    "requiredEngineVersion": "3.14.2086.54749"
+[        ]                  },
+[        ]                  "properties": {
+[        ]                    "appLocalWPF": "true",
+[        ]                    "campaignId": "",
+[        ]                    "channelManifestId": "VisualStudio.17.Release/17.14.25+36915.13.-january.2026-",
+[        ]                    "includeRecommended": "0",
+[        ]                    "nickname": "",
+[        ]                    "setupEngineFilePath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe"
+[        ]                  }
+[        ]                }
+[        ]              ]
+[        ]   [   +7 ms] Building native assets for windows_x64.
+[  +42 ms]   [  +60 ms] Running `C:\flutter\bin\cache\dart-sdk\bin\dart compile kernel --packages=D:\AU_Reader_V2\frontend\.dart_tool\package_config.json --output=D:\AU_Reader_V2\frontend\.dart_tool\hooks_runner\objective_c\196c15e30a\hook.dill --depfile=D:\AU_Reader_V2\frontend\.dart_tool\hooks_runner\objective_c\196c15e30a\hook.dill.d C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\objective_c-9.3.0\hook\build.dart`.
+[        ]   [   +1 ms] Found plugin path_provider_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_android-2.2.22\
+[  +12 ms]   [  +12 ms] Found plugin image_picker at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker-1.2.1\
+[   +1 ms]   [   +2 ms] Found plugin image_picker_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_windows-0.2.2\
+[   +7 ms]   [   +6 ms] Found plugin file_selector_windows at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_windows-0.9.3+5\
+[   +3 ms]   [   +3 ms] Found plugin image_picker_macos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_macos-0.2.2+1\
+[   +1 ms]   [   +2 ms] Found plugin file_selector_macos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_macos-0.9.5\
+[   +1 ms]   [   +1 ms] Found plugin image_picker_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_linux-0.2.2\
+[   +1 ms]   [   +1 ms] Found plugin file_selector_linux at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\file_selector_linux-0.9.4\
+[   +1 ms]   [   +1 ms] Found plugin image_picker_ios at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_ios-0.8.13+6\
+[   +1 ms]   [   +1 ms] Found plugin image_picker_for_web at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_for_web-3.1.1\
+[  +15 ms]   [   +2 ms] Found plugin image_picker_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.13+14\
+[        ]   [   +1 ms] Found plugin flutter_plugin_android_lifecycle at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.33\
+[        ]   [   +3 ms] Found plugin flutter_image_compress at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress-2.4.0\
+[        ]   [   +1 ms] Found plugin flutter_image_compress_web at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_web-0.1.5\
+[        ]   [   +2 ms] Found plugin flutter_image_compress_ohos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_ohos-0.0.3\
+[        ]   [   +1 ms] Found plugin flutter_image_compress_macos at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_macos-1.0.3\
+[        ]   [   +1 ms] Found plugin flutter_image_compress_common at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_image_compress_common-1.0.6\
+[  +19 ms]   [  +20 ms] Found plugin sqflite at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite-2.4.2\
+[  +11 ms]   [  +11 ms] Found plugin sqflite_darwin at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite_darwin-2.4.2\
+[   +5 ms]   [   +4 ms] Found plugin sqflite_android at C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite_android-2.4.2+2\
+[  +34 ms]   [  +35 ms] Skipping generating dart_plugin_registrant.dart because it is up-to-date.
+[        ]   [        ] gen_dart_plugin_registrant: Complete
+[   +2 ms]   [   +2 ms] kernel_snapshot_program: Starting due to {}
+[  +11 ms]   [  +11 ms] C:\flutter\bin\cache\dart-sdk\bin\dartaotruntime.exe C:\flutter\bin\cache\dart-sdk\bin\snapshots\frontend_server_aot.dart.snapshot --sdk-root C:\flutter\bin\cache\artifacts\engine\common\flutter_patched_sdk/ --target=flutter --no-print-incremental-dependencies -DFLUTTER_VERSION=3.41.2 -DFLUTTER_CHANNEL=stable -DFLUTTER_GIT_URL=https://github.com/flutter/flutter.git -DFLUTTER_FRAMEWORK_REVISION=90673a4eef -DFLUTTER_ENGINE_REVISION=6c0baaebf7 -DFLUTTER_DART_VERSION=3.11.0 -Ddart.vm.profile=false -Ddart.vm.product=false --enable-asserts --track-widget-creation --packages D:\AU_Reader_V2\frontend\.dart_tool\package_config.json --output-dill D:\AU_Reader_V2\frontend\.dart_tool\flutter_build\e50c17daa843a2ea366d3454c9c0c9f5\app.dill --depfile D:\AU_Reader_V2\frontend\.dart_tool\flutter_build\e50c17daa843a2ea366d3454c9c0c9f5\kernel_snapshot_program.d --incremental --initialize-from-dill D:\AU_Reader_V2\frontend\.dart_tool\flutter_build\e50c17daa843a2ea366d3454c9c0c9f5\app.dill --source file:///D:/AU_Reader_V2/frontend/.dart_tool/flutter_build/dart_plugin_registrant.dart --source package:flutter/src/dart_plugin_registrant.dart -Dflutter.dart_plugin_registrant=file:///D:/AU_Reader_V2/frontend/.dart_tool/flutter_build/dart_plugin_registrant.dart --verbosity=error package:au_reader/main.dart
+[+4727 ms]   [+4725 ms] input.json contents:
+[        ]              {
+[        ]                "assets": {},
+[        ]                "config": {
+[        ]                  "build_asset_types": [
+[        ]                    "code_assets/code"
+[        ]                  ],
+[        ]                  "extensions": {
+[        ]                    "code_assets": {
+[        ]                      "c_compiler": {
+[        ]                        "ar": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\lib.exe",
+[        ]                        "cc": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+[        ]                        "ld": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe",
+[        ]                        "windows": {
+[        ]                          "developer_command_prompt": {
+[        ]                            "arguments": [],
+[        ]                            "script": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat"
+[   +1 ms]                          }
+[        ]                        }
+[        ]                      },
+[        ]                      "link_mode_preference": "dynamic",
+[        ]                      "target_architecture": "x64",
+[        ]                      "target_os": "windows"
+[        ]                    }
+[        ]                  },
+[        ]                  "linking_enabled": false
+[        ]                },
+[        ]                "out_dir_shared": "D:\\AU_Reader_V2\\frontend\\.dart_tool\\hooks_runner\\shared\\objective_c\\build\\",
+[        ]                "out_file": "D:\\AU_Reader_V2\\frontend\\.dart_tool\\hooks_runner\\objective_c\\196c15e30a\\output.json",
+[        ]                "package_name": "objective_c",
+[        ]                "package_root": "C:\\Users\\him\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dev\\objective_c-9.3.0\\",
+[        ]                "user_defines": {}
+[        ]              }
+[   +6 ms]   [  +12 ms] Running `(cd C:\Users\him\AppData\Local\Pub\Cache\hosted\pub.dev\objective_c-9.3.0\; PATH=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64;C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64;;C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x86;;C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\tools;C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\ide;C:\Program Files (x86)\HTML Help Workshop;;C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\amd64;C:\WINDOWS\Microsoft.NET\Framework64\v4.0.30319\;C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\;C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin;C:\WINDOWS\Microsoft.NET\Framework\v4.0.30319\;;C:\flutter\bin\;C:\Python314\Scripts\;C:\Python314\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\laragon\bin\php\php-8.3.16-Win32-vs16-x64;C:\composer;C:\Program Files\Git\cmd;C:\Program Files\nodejs\;C:\ProgramData\chocolatey\bin;C:\Program Files\Memurai\;C:\flutter\bin;C:\Program Files\Java\jdk-21.0.10\bin;C:\Users\him\AppData\Local\Microsoft\WindowsApps;C:\Users\him\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\him\AppData\Roaming\Composer\vendor\bin;C:\Users\him\AppData\Local\Programs\Microsoft VS Code Insiders\bin;C:\Users\him\AppData\Roaming\npm;C:\Users\him\AppData\Local\Programs\Antigravity\bin;c:\Users\him\.antigravity\extensions\vscjava.vscode-java-debug-0.58.5-universal\bundled\scripts\noConfigScripts;C:\flutter\bin\mingit\cmd;;C:\flutter\bin\mingit\cmd PROGRAMDATA=C:\ProgramData SYSTEMDRIVE=C: SYSTEMROOT=C:\WINDOWS TEMP=C:\Users\him\AppData\Local\Temp TMP=C:\Users\him\AppData\Local\Temp USERPROFILE=C:\Users\him WINDIR=C:\WINDOWS C:\flutter\bin\cache\dart-sdk\bin\dart --packages=D:\AU_Reader_V2\frontend\.dart_tool\package_config.json D:\AU_Reader_V2\frontend\.dart_tool\hooks_runner\objective_c\196c15e30a\hook.dill --config=D:\AU_Reader_V2\frontend\.dart_tool\hooks_runner\objective_c\196c15e30a\input.json )`.
+[ +336 ms]   [ +337 ms] output.json contents:
+[        ]              {
+[        ]                "assets_for_linking": {},
+[        ]                "status": "success",
+[        ]                "timestamp": "2026-03-01 12:41:45.000"
+[        ]              }
+[  +65 ms]   [  +66 ms] Building native assets for windows_x64 done.
+[   +2 ms]   [   +3 ms] dart_build: Complete
+[   +7 ms]   [   +6 ms] install_code_assets: Starting due to {}
+[   +5 ms]   [   +5 ms] Writing native assets json to file:///D:/AU_Reader_V2/frontend/.dart_tool/flutter_build/e50c17daa843a2ea366d3454c9c0c9f5/native_assets.json.
+[   +2 ms]   [   +2 ms] Writing D:\AU_Reader_V2\frontend\.dart_tool\flutter_build\e50c17daa843a2ea366d3454c9c0c9f5\native_assets.json done.
+[   +1 ms]   [   +2 ms] install_code_assets: Complete
+[  +27 ms]   [   +3 ms] version=3.11.0 (stable) (Mon Feb 9 00:38:07 2026 -0800) on "windows_x64"
+[        ]   [        ] pid=31124, thread=19288, isolate_group=main(000002194D9439B0), isolate=main(000002194D9380E0)
+[        ]              os=windows, arch=x64, comp=no, sim=no
+
+../../runtime/vm/os_th
+read.cc: 364: error: 
+Could not start 
+thread DartWorker: 22 
+(The device does not 
+recognize the command.
+)
+version=3.11.0 
+(stable) (Mon Feb 9 
+00:38:07 2026 -0800) 
+on "windows_x64"
+pid=18784, 
+thread=31752, isolate_
+group=main(00000282445
+D20B0), isolate=main(0
+0000282445ECFE0)
+os=windows, arch=x64, 
+comp=no, sim=no
+isolate_instructions=2
+8246d30000, vm_instruc
+tions=7ff61b848400
+fp=a3a76fbcb0, 
+sp=a3a76fbc68, 
+pc=7ff61bb2cca3
+  pc 
+0x00007ff61bb2cca3 fp 
+0x000000a3a76fbcb0 Dar
+t_DetectNullSafety+0x2
+dc1c3
+-- End of 
+DumpStackTrace
+  pc 
+0x0000000000000000 fp 
+0x000000a3a76fc808 sp 
+0x0000000000000000 
+[Stub] Exit frame
+  pc 
+0x000002824740307d fp 
+0x000000a3a76fc840 sp 
+0x000000a3a76fc818 
+[Stub] 
+OptimizeFunction+0x2d
+  pc 
+0x0000028246d4e6b5 fp 
+0x000000a3a76fc8a0 sp 
+0x000000a3a76fc850 
+[Unoptimized] _CustomZ
+one@5048458.runUnary+0
+xe5
+  pc 
+0x0000028246d4e943 fp 
+0x000000a3a76fc928 sp 
+0x000000a3a76fc8b0 
+[Unoptimized] _CustomZ
+one@5048458.runUnaryGu
+arded+0x123
+  pc 
+0x000002824fcc4b04 fp 
+0x000000a3a76fc978 sp 
+0x000000a3a76fc938 
+[Optimized] _Buffering
+StreamSubscription@504
+8458._sendData@5048458
++0x134
+  pc 
+0x0000028246d88e08 fp 
+0x000000a3a76fc9b8 sp 
+0x000000a3a76fc988 
+[Unoptimized] _Bufferi
+ngStreamSubscription@5
+048458._add@5048458+0x
+228
+  pc 
+0x0000028246d89397 fp 
+0x000000a3a76fc9f8 sp 
+0x000000a3a76fc9c8 
+[Unoptimized] _SyncStr
+eamController@5048458.
+_sendData@5048458+0x19
+7
+  pc 
+0x0000028246d896e9 fp 
+0x000000a3a76fca38 sp 
+0x000000a3a76fca08 
+[Unoptimized] _StreamC
+ontroller@5048458._add
+@5048458+0x1b9
+  pc 
+0x0000028246d89b68 fp 
+0x000000a3a76fca78 sp 
+0x000000a3a76fca48 
+[Unoptimized] _StreamC
+ontroller@5048458.add+
+0x1f8
+  pc 
+0x0000028246dcf981 fp 
+0x000000a3a76fcab8 sp 
+0x000000a3a76fca88 
+[Unoptimized] _StreamS
+inkImpl@16069316.add+0
+x231
+  pc 
+0x0000028246dcfbfa fp 
+0x000000a3a76fcb00 sp 
+0x000000a3a76fcac8 
+[Unoptimized] _IOSinkI
+mpl@16069316.write+0x1
+8a
+  pc 
+0x0000028246dcfe84 fp 
+0x000000a3a76fcb48 sp 
+0x000000a3a76fcb10 
+[Unoptimized] _StdSink
+@16069316._write@16069
+316+0x114
+  pc 
+0x0000028246dd00c3 fp 
+0x000000a3a76fcb88 sp 
+0x000000a3a76fcb58 
+[Unoptimized] _StdSink
+@16069316.write+0xa3
+  pc 
+0x0000028246dd11ba fp 
+0x000000a3a76fcbd8 sp 
+0x000000a3a76fcb98 
+[Unoptimized] Stdio._s
+tdioWrite@25322072.<an
+onymous closure>+0xba
+  pc 
+0x0000028246eb4f0d fp 
+0x000000a3a76fcc50 sp 
+0x000000a3a76fcbe8 
+[Unoptimized] 
+asyncGuard.<anonymous 
+closure>+0x11d
+  pc 
+0x0000028246eddcf3 fp 
+0x000000a3a76fccc8 sp 
+0x000000a3a76fcc60 
+[Unoptimized] 
+_rootRun@5048458+0x2c3
+  pc 
+0x0000028246eddf2a fp 
+0x000000a3a76fcd28 sp 
+0x000000a3a76fccd8 
+[Unoptimized] 
+_rootRun@5048458+0x11a
+  pc 
+0x0000028246e42abc fp 
+0x000000a3a76fcdb8 sp 
+0x000000a3a76fcd38 
+[Unoptimized] _CustomZ
+one@5048458.run+0x1ec
+  pc 
+0x0000028246ed71e7 fp 
+0x000000a3a76fce08 sp 
+0x000000a3a76fcdc8 
+[Unoptimized] _runZone
+d@5048458+0x117
+  pc 
+0x0000028246ee000e fp 
+0x000000a3a76fcec0 sp 
+0x000000a3a76fce18 
+[Unoptimized] 
+runZonedGuarded+0x47e
+  pc 
+0x0000028246d478f9 fp 
+0x000000a3a76fcf38 sp 
+0x000000a3a76fced0 
+[Unoptimized] 
+asyncGuard+0x4d9
+  pc 
+0x0000028246d87bd7 fp 
+0x000000a3a76fcfc8 sp 
+0x000000a3a76fcf48 
+[Unoptimized] Stdio._s
+tdioWrite@25322072+0x2
+97
+  pc 
+0x0000028246dd1cc3 fp 
+0x000000a3a76fd040 sp 
+0x000000a3a76fcfd8 
+[Unoptimized] Stdio.st
+doutWrite+0x1d3
+  pc 
+0x0000028246e33763 fp 
+0x000000a3a76fd090 sp 
+0x000000a3a76fd050 
+[Unoptimized] WindowsS
+tdoutLogger.writeToStd
+Out+0x343
+  pc 
+0x0000028246e37afc fp 
+0x000000a3a76fd128 sp 
+0x000000a3a76fd0a0 
+[Unoptimized] StdoutLo
+gger.printStatus+0x96c
+  pc 
+0x000002824b0f39f0 fp 
+0x000000a3a76fd1e8 sp 
+0x000000a3a76fd138 
+[Unoptimized] Delegati
+ngLogger.printStatus+0
+x490
+  pc 
+0x000002824b0f2530 fp 
+0x000000a3a76fd288 sp 
+0x000000a3a76fd1f8 
+[Unoptimized] VerboseL
+ogger._emit@26434337+0
+xcf0
+  pc 
+0x000002824b0f17f9 fp 
+0x000000a3a76fd2d0 sp 
+0x000000a3a76fd298 
+[Unoptimized] VerboseL
+ogger.printTrace+0xa9
+  pc 
+0x000002824fcb5901 fp 
+0x000000a3a76fd338 sp 
+0x000000a3a76fd2e0 
+[Unoptimized] _Default
+ProcessUtils@89014270.
+stream.<anonymous 
+closure>+0x451
+  pc 
+0x0000028246ede6b6 fp 
+0x000000a3a76fd3b8 sp 
+0x000000a3a76fd348 
+[Unoptimized] _rootRun
+Unary@5048458+0x156
+  pc 
+0x0000028246edea5d fp 
+0x000000a3a76fd420 sp 
+0x000000a3a76fd3c8 
+[Unoptimized] _rootRun
+Unary@5048458+0x11d
+  pc 
+0x0000028246d4e7bf fp 
+0x000000a3a76fd4b8 sp 
+0x000000a3a76fd430 
+[Unoptimized] _CustomZ
+one@5048458.runUnary+0
+x1ef
+  pc 
+0x0000028246d4e943 fp 
+0x000000a3a76fd540 sp 
+0x000000a3a76fd4c8 
+[Unoptimized] _CustomZ
+one@5048458.runUnaryGu
+arded+0x123
+  pc 
+0x000002824fcc4b04 fp 
+0x000000a3a76fd590 sp 
+0x000000a3a76fd550 
+[Optimized] _Buffering
+StreamSubscription@504
+8458._sendData@5048458
++0x134
+  pc 
+0x0000028246d88e08 fp 
+0x000000a3a76fd5d0 sp 
+0x000000a3a76fd5a0 
+[Unoptimized] _Bufferi
+ngStreamSubscription@5
+048458._add@5048458+0x
+228
+  pc 
+0x000002824fcb5450 fp 
+0x000000a3a76fd610 sp 
+0x000000a3a76fd5e0 
+[Unoptimized] _Forward
+ingStreamSubscription@
+5048458._add@5048458+0
+x1e0
+  pc 
+0x000002824fcb4e7c fp 
+0x000000a3a76fd680 sp 
+0x000000a3a76fd620 
+[Unoptimized] _WhereSt
+ream@5048458._handleDa
+ta@5048458+0x2cc
+  pc 
+0x000002824fcb4b4a fp 
+0x000000a3a76fd6c8 sp 
+0x000000a3a76fd690 
+[Unoptimized] _Forward
+ingStreamSubscription@
+5048458._handleData@50
+48458+0x19a
+  pc 
+0x000002824fcb4976 fp 
+0x000000a3a76fd708 sp 
+0x000000a3a76fd6d8 
+[Unoptimized] _Forward
+ingStreamSubscription@
+5048458._handleData@50
+48458+0x86
+  pc 
+0x0000028246ede6b6 fp 
+0x000000a3a76fd788 sp 
+0x000000a3a76fd718 
+[Unoptimized] _rootRun
+Unary@5048458+0x156
+  pc 
+0x0000028246edea5d fp 
+0x000000a3a76fd7f0 sp 
+0x000000a3a76fd798 
+[Unoptimized] _rootRun
+Unary@5048458+0x11d
+  pc 
+0x0000028246d4e7bf fp 
+0x000000a3a76fd888 sp 
+0x000000a3a76fd800 
+[Unoptimized] _CustomZ
+one@5048458.runUnary+0
+x1ef
+  pc 
+0x0000028246d4e943 fp 
+0x000000a3a76fd910 sp 
+0x000000a3a76fd898 
+[Unoptimized] _CustomZ
+one@5048458.runUnaryGu
+arded+0x123
+  pc 
+0x000002824fcc4b04 fp 
+0x000000a3a76fd960 sp 
+0x000000a3a76fd920 
+[Optimized] _Buffering
+StreamSubscription@504
+8458._sendData@5048458
++0x134
+  pc 
+0x0000028246d88e08 fp 
+0x000000a3a76fd9a0 sp 
+0x000000a3a76fd970 
+[Unoptimized] _Bufferi
+ngStreamSubscription@5
+048458._add@5048458+0x
+228
+  pc 
+0x000002824fccd05e fp 
+0x000000a3a76fda28 sp 
+0x000000a3a76fd9b0 
+[Optimized] _LineSplit
+terSink@12003594._addL
+ines@12003594+0x29e
+  pc 
+0x000002824f3f1c1d fp 
+0x000000a3a76fda80 sp 
+0x000000a3a76fda38 
+[Unoptimized] _LineSpl
+itterSink@12003594.add
+Slice+0x2bd
+  pc 
+0x000002824f3f1901 fp 
+0x000000a3a76fdad8 sp 
+0x000000a3a76fda90 
+[Unoptimized] StringCo
+nversionSink.add+0x191
+  pc 
+0x0000028246ed4f1d fp 
+0x000000a3a76fdb40 sp 
+0x000000a3a76fdae8 
+[Unoptimized] _SinkTra
+nsformerStreamSubscrip
+tion@5048458._handleDa
+ta@5048458+0x1dd
+  pc 
+0x0000028246ed5136 fp 
+0x000000a3a76fdb80 sp 
+0x000000a3a76fdb50 
+[Unoptimized] _SinkTra
+nsformerStreamSubscrip
+tion@5048458._handleDa
+ta@5048458+0x86
+  pc 
+0x0000028246ede6b6 fp 
+0x000000a3a76fdc00 sp 
+0x000000a3a76fdb90 
+[Unoptimized] _rootRun
+Unary@5048458+0x156
+  pc 
+0x0000028246edea5d fp 
+0x000000a3a76fdc68 sp 
+0x000000a3a76fdc10 
+[Unoptimized] _rootRun
+Unary@5048458+0x11d
+  pc 
+0x0000028246d4e7bf fp 
+0x000000a3a76fdd00 sp 
+0x000000a3a76fdc78 
+[Unoptimized] _CustomZ
+one@5048458.runUnary+0
+x1ef
+  pc 
+0x0000028246d4e943 fp 
+0x000000a3a76fdd88 sp 
+0x000000a3a76fdd10 
+[Unoptimized] _CustomZ
+one@5048458.runUnaryGu
+arded+0x123
+  pc 
+0x000002824fcc4b04 fp 
+0x000000a3a76fddd8 sp 
+0x000000a3a76fdd98 
+[Optimized] _Buffering
+StreamSubscription@504
+8458._sendData@5048458
++0x134
+  pc 
+0x0000028246d88e08 fp 
+0x000000a3a76fde18 sp 
+0x000000a3a76fdde8 
+[Unoptimized] _Bufferi
+ngStreamSubscription@5
+048458._add@5048458+0x
+228
+  pc 
+0x0000028246ed40c5 fp 
+0x000000a3a76fde58 sp 
+0x000000a3a76fde28 
+[Unoptimized] _SinkTra
+nsformerStreamSubscrip
+tion@5048458._add@5048
+458+0x205
+  pc 
+0x0000028246ed3e57 fp 
+0x000000a3a76fde98 sp 
+0x000000a3a76fde68 
+[Unoptimized] _EventSi
+nkWrapper@5048458.add+
+0x197
+  pc 
+0x000002824f3f172a fp 
+0x000000a3a76fded8 sp 
+0x000000a3a76fdea8 
+[Unoptimized] StackTra
+ceTransform|transformW
+ithCallSite.<anonymous
+ closure>+0x9a
+  pc 
+0x000002824f3f1461 fp 
+0x000000a3a76fdf38 sp 
+0x000000a3a76fdee8 
+[Unoptimized] _Handler
+EventSink@5048458.add+
+0x2d1
+  pc 
+0x0000028246ed4f1d fp 
+0x000000a3a76fdfa0 sp 
+0x000000a3a76fdf48 
+[Unoptimized] _SinkTra
+nsformerStreamSubscrip
+tion@5048458._handleDa
+ta@5048458+0x1dd
+  pc 
+0x0000028246ed5136 fp 
+0x000000a3a76fdfe0 sp 
+0x000000a3a76fdfb0 
+[Unoptimized] _SinkTra
+nsformerStreamSubscrip
+tion@5048458._handleDa
+ta@5048458+0x86
+  pc 
+0x0000028246ede6b6 fp 
+0x000000a3a76fe060 sp 
+0x000000a3a76fdff0 
+[Unoptimized] _rootRun
+Unary@5048458+0x156
+  pc 
+0x0000028246edea5d fp 
+0x000000a3a76fe0c8 sp 
+0x000000a3a76fe070 
+[Unoptimized] _rootRun
+Unary@5048458+0x11d
+  pc 
+0x0000028246d4e7bf fp 
+0x000000a3a76fe160 sp 
+0x000000a3a76fe0d8 
+[Unoptimized] _CustomZ
+one@5048458.runUnary+0
+x1ef
+  pc 
+0x0000028246d4e943 fp 
+0x000000a3a76fe1e8 sp 
+0x000000a3a76fe170 
+[Unoptimized] _CustomZ
+one@5048458.runUnaryGu
+arded+0x123
+  pc 
+0x000002824fcc4b04 fp 
+0x000000a3a76fe238 sp 
+0x000000a3a76fe1f8 
+[Optimized] _Buffering
+StreamSubscription@504
+8458._sendData@5048458
++0x134
+  pc 
+0x0000028246d88e08 fp 
+0x000000a3a76fe278 sp 
+0x000000a3a76fe248 
+[Unoptimized] _Bufferi
+ngStreamSubscription@5
+048458._add@5048458+0x
+228
+  pc 
+0x0000028246ed40c5 fp 
+0x000000a3a76fe2b8 sp 
+0x000000a3a76fe288 
+[Unoptimized] _SinkTra
+nsformerStreamSubscrip
+tion@5048458._add@5048
+458+0x205
+  pc 
+0x0000028246ed3e57 fp 
+0x000000a3a76fe2f8 sp 
+0x000000a3a76fe2c8 
+[Unoptimized] _EventSi
+nkWrapper@5048458.add+
+0x197
+  pc 
+0x000002824f3f10a5 fp 
+0x000000a3a76fe338 sp 
+0x000000a3a76fe308 
+[Unoptimized] _StringA
+dapterSink@12003594.ad
+d+0x185
+  pc 
+0x000002824f3f0dc5 fp 
+0x000000a3a76fe380 sp 
+0x000000a3a76fe348 
+[Unoptimized] _StringA
+dapterSink@12003594.ad
+dSlice+0x155
+  pc 
+0x000002824f3ee82b fp 
+0x000000a3a76fe3e0 sp 
+0x000000a3a76fe390 
+[Unoptimized] _Utf8Con
+versionSink@12003594.a
+ddSlice+0x27b
+  pc 
+0x000002824f3ee551 fp 
+0x000000a3a76fe438 sp 
+0x000000a3a76fe3f0 
+[Unoptimized] _Utf8Con
+versionSink@12003594.a
+dd+0x191
+  pc 
+0x0000028246ed4bd7 fp 
+0x000000a3a76fe478 sp 
+0x000000a3a76fe448 
+[Unoptimized] _Convert
+erStreamEventSink@1200
+3594.add+0x197
+  pc 
+0x0000028246ed4f1d fp 
+0x000000a3a76fe4e0 sp 
+0x000000a3a76fe488 
+[Unoptimized] _SinkTra
+nsformerStreamSubscrip
+tion@5048458._handleDa
+ta@5048458+0x1dd
+  pc 
+0x0000028246ed5136 fp 
+0x000000a3a76fe520 sp 
+0x000000a3a76fe4f0 
+[Unoptimized] _SinkTra
+nsformerStreamSubscrip
+tion@5048458._handleDa
+ta@5048458+0x86
+  pc 
+0x0000028246ede6b6 fp 
+0x000000a3a76fe5a0 sp 
+0x000000a3a76fe530 
+[Unoptimized] _rootRun
+Unary@5048458+0x156
+  pc 
+0x0000028246edea5d fp 
+0x000000a3a76fe608 sp 
+0x000000a3a76fe5b0 
+[Unoptimized] _rootRun
+Unary@5048458+0x11d
+  pc 
+0x0000028246d4e7bf fp 
+0x000000a3a76fe6a0 sp 
+0x000000a3a76fe618 
+[Unoptimized] _CustomZ
+one@5048458.runUnary+0
+x1ef
+  pc 
+0x0000028246d4e943 fp 
+0x000000a3a76fe728 sp 
+0x000000a3a76fe6b0 
+[Unoptimized] _CustomZ
+one@5048458.runUnaryGu
+arded+0x123
+  pc 
+0x000002824fcc4b04 fp 
+0x000000a3a76fe778 sp 
+0x000000a3a76fe738 
+[Optimized] _Buffering
+StreamSubscription@504
+8458._sendData@5048458
++0x134
+  pc 
+0x0000028246d88e08 fp 
+0x000000a3a76fe7b8 sp 
+0x000000a3a76fe788 
+[Unoptimized] _Bufferi
+ngStreamSubscription@5
+048458._add@5048458+0x
+228
+  pc 
+0x0000028246d89397 fp 
+0x000000a3a76fe7f8 sp 
+0x000000a3a76fe7c8 
+[Unoptimized] _SyncStr
+eamController@5048458.
+_sendData@5048458+0x19
+7
+  pc 
+0x0000028246d896e9 fp 
+0x000000a3a76fe838 sp 
+0x000000a3a76fe808 
+[Unoptimized] _StreamC
+ontroller@5048458._add
+@5048458+0x1b9
+  pc 
+0x0000028246d89b68 fp 
+0x000000a3a76fe878 sp 
+0x000000a3a76fe848 
+[Unoptimized] _StreamC
+ontroller@5048458.add+
+0x1f8
+  pc 
+0x0000028246dc6716 fp 
+0x000000a3a76fe8c8 sp 
+0x000000a3a76fe888 
+[Unoptimized] _Socket@
+16069316._onData@16069
+316+0x246
+  pc 
+0x0000028246dc6a26 fp 
+0x000000a3a76fe908 sp 
+0x000000a3a76fe8d8 
+[Unoptimized] _Socket@
+16069316._onData@16069
+316+0x86
+  pc 
+0x0000028246ede82b fp 
+0x000000a3a76fe988 sp 
+0x000000a3a76fe918 
+[Unoptimized] _rootRun
+Unary@5048458+0x2cb
+  pc 
+0x0000028246edea5d fp 
+0x000000a3a76fe9f0 sp 
+0x000000a3a76fe998 
+[Unoptimized] _rootRun
+Unary@5048458+0x11d
+  pc 
+0x0000028246d4e7bf fp 
+0x000000a3a76fea88 sp 
+0x000000a3a76fea00 
+[Unoptimized] _CustomZ
+one@5048458.runUnary+0
+x1ef
+  pc 
+0x0000028246d4e943 fp 
+0x000000a3a76feb10 sp 
+0x000000a3a76fea98 
+[Unoptimized] _CustomZ
+one@5048458.runUnaryGu
+arded+0x123
+  pc 
+0x000002824fcc4b04 fp 
+0x000000a3a76feb60 sp 
+0x000000a3a76feb20 
+[Optimized] _Buffering
+StreamSubscription@504
+8458._sendData@5048458
++0x134
+  pc 
+0x0000028246d88e08 fp 
+0x000000a3a76feba0 sp 
+0x000000a3a76feb70 
+[Unoptimized] _Bufferi
+ngStreamSubscription@5
+048458._add@5048458+0x
+228
+  pc 
+0x0000028246d89397 fp 
+0x000000a3a76febe0 sp 
+0x000000a3a76febb0 
+[Unoptimized] _SyncStr
+eamController@5048458.
+_sendData@5048458+0x19
+7
+  pc 
+0x0000028246d896e9 fp 
+0x000000a3a76fec20 sp 
+0x000000a3a76febf0 
+[Unoptimized] _StreamC
+ontroller@5048458._add
+@5048458+0x1b9
+  pc 
+0x0000028246d89b68 fp 
+0x000000a3a76fec60 sp 
+0x000000a3a76fec30 
+[Unoptimized] _StreamC
+ontroller@5048458.add+
+0x1f8
+  pc 
+0x0000028246dca4b8 fp 
+0x000000a3a76feca0 sp 
+0x000000a3a76fec70 
+[Unoptimized] new _Raw
+Socket@16069316..<anon
+ymous closure>+0xb8
+  pc 
+0x0000028246eb0a72 fp 
+0x000000a3a76fecf8 sp 
+0x000000a3a76fecb0 
+[Unoptimized] _NativeS
+ocket@16069316.issueRe
+adEvent.issue+0x5d2
+  pc 
+0x0000028246ed9730 fp 
+0x000000a3a76fed40 sp 
+0x000000a3a76fed08 
+[Unoptimized] _microta
+skLoop@5048458+0x210
+  pc 
+0x0000028246edd0a5 fp 
+0x000000a3a76fed80 sp 
+0x000000a3a76fed50 
+[Unoptimized] _startMi
+crotaskLoop@5048458+0x
+b5
+  pc 
+0x0000028246edd326 fp 
+0x000000a3a76feda8 sp 
+0x000000a3a76fed90 
+[Unoptimized] _startMi
+crotaskLoop@5048458+0x
+76
+  pc 
+0x0000028246eee1c4 fp 
+0x000000a3a76fede8 sp 
+0x000000a3a76fedb8 
+[Unoptimized] _runPend
+ingImmediateCallback@1
+026248+0x104
+  pc 
+0x0000028246f01f38 fp 
+0x000000a3a76fee28 sp 
+0x000000a3a76fedf8 
+[Unoptimized] _RawRece
+ivePort@1026248._handl
+eMessage@1026248+0x1c8
+  pc 
+0x000002824740318f fp 
+0x000000a3a76fef50 sp 
+0x000000a3a76fee38 
+[Stub] Entry frame
