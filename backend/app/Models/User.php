@@ -21,6 +21,7 @@ class User extends Authenticatable
         'bio',
         'author_bio',
         'social_links',
+        'author_social_links',
         'theme_preference',
     ];
 
@@ -53,6 +54,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'social_links' => 'array',
+            'author_social_links' => 'array',
         ];
     }
 

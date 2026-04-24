@@ -342,9 +342,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final String coverUrl = ApiService.getImageUrl(_series!['cover_url']);
     final episodes = _series!['episodes'] as List? ?? [];
     final author = _series!['author'] ?? {};
-    final authorName = author['pen_name'] ?? author['name'] ?? 'Unknown';
-    final authorAvatar = author['avatar_url'] != null
-        ? ApiService.getImageUrl(author['avatar_url'])
+    final authorName = author['pen_name'] ?? 'Unknown';
+    final authorAvatar = author['author_avatar_url'] != null
+        ? ApiService.getImageUrl(author['author_avatar_url'])
         : null;
     final synopsis = _series!['synopsis'] ?? 'No synopsis available.';
     final genre = _series!['genre'] ?? '';

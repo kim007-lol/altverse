@@ -11,6 +11,7 @@ use App\Models\UserXp;
 use App\Services\XpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CommentController extends Controller
@@ -146,7 +147,8 @@ class CommentController extends Controller
             }
         ]);
 
-        // Removed automatic XP award for commenting; handled via Missions now
+        // Automatically claim the post_comment mission for XP
+        app(\App\Services\MissionService::class)->autoClaimMission($user, 'post_comment');
 
         // Notify author
         $series = $episode->series;
@@ -177,87 +179,74 @@ class CommentController extends Controller
     /**
      * Toggle like on a comment + recalculate priority_score.
      *
-     * Security hardening:
+     * SECURITY: Uses DB::transaction + lockForUpdate to prevent TOCTOU race condition.
+     * - Locks comment row so concurrent requests are serialized
      * - Uses is_active toggle (NOT delete/create) to preserve XP award history
-     * - XP only awarded on FIRST-EVER like per user-comment pair (xp_awarded flag)
      * - Max 30 likes per day per user (prevents alt-account collusion at scale)
-     * - No XP for self-likes
      */
     public function toggleLike(Request $request, Comment $comment): JsonResponse
     {
         $user = $request->user();
 
-        // Find existing record (active or inactive) for this user-comment pair
-        $existingLike = CommentLike::where('user_id', $user->id)
-            ->where('comment_id', $comment->id)
-            ->first();
+        $result = DB::transaction(function () use ($user, $comment) {
+            // Lock comment row — concurrent requests will queue here
+            $lockedComment = Comment::lockForUpdate()->find($comment->id);
 
-        if ($existingLike && $existingLike->is_active) {
-            // ── Unlike: just deactivate, don't delete (preserves xp_awarded history) ──
-            $existingLike->update(['is_active' => false]);
-            // Floor at 0 to prevent negative
-            $comment->likes_count = max(0, $comment->likes_count - 1);
-            $comment->save();
+            // Find existing record (active or inactive)
+            $existingLike = CommentLike::where('user_id', $user->id)
+                ->where('comment_id', $lockedComment->id)
+                ->lockForUpdate()
+                ->first();
 
-            return response()->json([
-                'liked'       => false,
-                'likes_count' => $comment->likes_count,
-            ]);
-        }
+            if ($existingLike && $existingLike->is_active) {
+                // ── Unlike ──
+                $existingLike->update(['is_active' => false]);
+                $lockedComment->likes_count = max(0, $lockedComment->likes_count - 1);
+                $lockedComment->save();
 
-        // ── Like (new or re-activate) ──
+                return ['liked' => false, 'likes_count' => $lockedComment->likes_count];
+            }
 
-        // Rate limit: max 30 likes per day per user
-        $todayLikeCount = CommentLike::where('user_id', $user->id)
-            ->where('is_active', true)
-            ->whereDate('created_at', now()->toDateString())
-            ->count();
+            // ── Like (new or re-activate) ──
 
-        if ($todayLikeCount >= 30) {
-            return response()->json([
-                'message' => 'Batas like harian tercapai (30 per hari).',
-            ], 429);
-        }
+            // Rate limit: max 30 likes per day per user
+            $todayLikeCount = CommentLike::where('user_id', $user->id)
+                ->where('is_active', true)
+                ->whereDate('created_at', now()->toDateString())
+                ->count();
 
-        $shouldAwardXp = false;
+            if ($todayLikeCount >= 30) {
+                throw new \Exception('RATE_LIMIT');
+            }
 
-        if ($existingLike) {
-            // Re-activate existing like — XP was already decided on first like
-            $existingLike->update(['is_active' => true]);
-        } else {
-            // Brand new like — determine if XP should be awarded
-            $shouldAwardXp = ($comment->user_id !== $user->id); // no self-like XP
+            if ($existingLike) {
+                $existingLike->update(['is_active' => true]);
+            } else {
+                CommentLike::create([
+                    'user_id'    => $user->id,
+                    'comment_id' => $lockedComment->id,
+                    'xp_awarded' => ($lockedComment->user_id !== $user->id),
+                    'is_active'  => true,
+                ]);
+            }
 
-            CommentLike::create([
-                'user_id'    => $user->id,
-                'comment_id' => $comment->id,
-                'xp_awarded' => $shouldAwardXp,
-                'is_active'  => true,
-            ]);
-        }
+            $lockedComment->increment('likes_count');
+            $lockedComment->refresh();
 
-        $comment->increment('likes_count');
+            // Recalculate priority score
+            $commentXp = UserXp::find($lockedComment->user_id);
+            $commentLevel = $commentXp?->level ?? 0;
+            $commentWeight = $lockedComment->user?->supporterLevel?->weight ?? 0;
 
-        // Removed automatic XP award to comment OWNER; handled via Missions now
-        // if ($shouldAwardXp) {
-        //     XpService::award($comment->user_id, 'like_received');
-        // }
+            $lockedComment->priority_score = ($lockedComment->likes_count * 2)
+                + ($commentLevel * 1.5)
+                + $commentWeight;
+            $lockedComment->save();
 
-        // Recalculate priority score
-        $comment->refresh();
-        $commentXp = UserXp::find($comment->user_id);
-        $commentLevel = $commentXp?->level ?? 0;
-        $commentWeight = $comment->user?->supporterLevel?->weight ?? 0;
+            return ['liked' => true, 'likes_count' => $lockedComment->likes_count];
+        });
 
-        $comment->priority_score = ($comment->likes_count * 2)
-            + ($commentLevel * 1.5)
-            + $commentWeight;
-        $comment->save();
-
-        return response()->json([
-            'liked'       => true,
-            'likes_count' => $comment->likes_count,
-        ]);
+        return response()->json($result);
     }
 
     /** Delete own comment */

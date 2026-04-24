@@ -86,27 +86,32 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('comments/{comment}/like', [CommentController::class, 'toggleLike']);
     Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
 
-    // ─── Reader (role-guarded) ───
-    Route::prefix('reader')->middleware('reader-only')->group(function () {
-        // FYP & Search
-        Route::get('fyp', [FypController::class, 'index']);
-        Route::get('search', [SearchController::class, 'index']);
-
-        // Profile
-        Route::get('profile', [ReaderProfileController::class, 'me']);
+    // ─── Shared Reader Endpoints (Accessible to both Readers and Authors) ───
+    Route::prefix('reader')->group(function () {
+        // Public Profiles
         Route::get('profile/{user}', [ReaderProfileController::class, 'show']);
-
-        // Bookmarks
-        Route::get('bookmarks', [BookmarkController::class, 'index']);
-        Route::post('bookmarks/{series}/toggle', [BookmarkController::class, 'toggle']);
-        Route::get('bookmarks/{series}/check', [BookmarkController::class, 'check']);
+        Route::get('author/{user}/profile', [FollowController::class, 'authorProfile']);
 
         // Following
         Route::get('following', [FollowController::class, 'following']);
         Route::get('followers', [FollowController::class, 'followers']);
         Route::post('follow/{user}/toggle', [FollowController::class, 'toggle']);
         Route::get('follow/{user}/check', [FollowController::class, 'check']);
-        Route::get('author/{user}/profile', [FollowController::class, 'authorProfile']);
+    });
+
+    // ─── Reader (role-guarded) ───
+    Route::prefix('reader')->middleware('reader-only')->group(function () {
+        // FYP & Search
+        Route::get('fyp', [FypController::class, 'index']);
+        Route::get('search', [SearchController::class, 'index']);
+
+        // Private Profile (My Profile)
+        Route::get('profile', [ReaderProfileController::class, 'me']);
+
+        // Bookmarks
+        Route::get('bookmarks', [BookmarkController::class, 'index']);
+        Route::post('bookmarks/{series}/toggle', [BookmarkController::class, 'toggle']);
+        Route::get('bookmarks/{series}/check', [BookmarkController::class, 'check']);
 
         // Reading
         Route::get('history', [ReadingController::class, 'history']);

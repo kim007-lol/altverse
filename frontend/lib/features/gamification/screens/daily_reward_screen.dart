@@ -49,7 +49,9 @@ class _DailyRewardScreenState extends State<DailyRewardScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                '🎉 +${json['coins_earned']} Coins, +${json['xp_earned']} XP (Streak: ${json['streak']})',
+                json['coins_earned'] > 0
+                    ? '🎉 +${json['coins_earned']} Coins & +${json['xp_earned']} XP (Streak: ${json['streak']})'
+                    : '🎉 +${json['xp_earned']} XP (Streak: ${json['streak']})',
               ),
               backgroundColor: Colors.green,
             ),
@@ -79,7 +81,9 @@ class _DailyRewardScreenState extends State<DailyRewardScreen> {
     final coins = _data['coins'] ?? 0;
     final streak = _data['streak'] ?? 0;
     final claimedToday = _data['claimed_today'] == true;
-    final nextReward = _data['next_reward'] ?? 15;
+    final nextRewardXp = _data['next_reward_xp'] ?? 10;
+    final nextRewardCoins = _data['next_reward_coins'] ?? 0;
+    final isCoinDrop = nextRewardCoins > 0;
     final weekDays = (_data['week_days'] ?? []) as List;
 
     final xpForNext = level * 1000;
@@ -209,8 +213,10 @@ class _DailyRewardScreenState extends State<DailyRewardScreen> {
                     const SizedBox(height: 4),
                     Text(
                       claimedToday
-                          ? 'Sudah diklaim hari ini!'
-                          : 'Klaim sekarang untuk +$nextReward coins!',
+                          ? 'Sudah diklaim hari ini! Kembali besok.'
+                          : isCoinDrop
+                          ? 'Klaim lusa untuk +$nextRewardCoins Coins & +$nextRewardXp XP!'
+                          : 'Klaim sekarang untuk +$nextRewardXp XP!',
                       style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                     const SizedBox(height: 16),
@@ -296,7 +302,9 @@ class _DailyRewardScreenState extends State<DailyRewardScreen> {
                               ? '✅ Sudah Diklaim'
                               : (_isClaiming
                                     ? 'Claiming...'
-                                    : '🎁 Klaim Reward (+$nextReward coins)'),
+                                    : isCoinDrop
+                                    ? '🎁 Klaim +$nextRewardCoins Coins & +$nextRewardXp XP'
+                                    : '🎁 Klaim +$nextRewardXp XP'),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),

@@ -55,36 +55,76 @@ class WalletController extends Controller
         while ($user->transactions()->where('type', 'daily_reward')->whereDate('created_at', $checkDate)->exists()) {
             $streak++;
             $checkDate = $checkDate->subDay();
-            if ($streak >= 7) break;
         }
 
-        // FIX #2: Reduced reward rate (was 10 + streak*5)
-        $rewardCoins = 5 + ($streak * 2); // max 19/day at 7-day streak
+        $rewardXp = $streak * 10;
+        $rewardCoins = 0;
 
-        $user->increment('coins', $rewardCoins);
+        if ($streak === 7) {
+            $hasReceivedCoinBonus = Transaction::where('user_id', $user->id)
+                ->where('type', 'daily_coin_bonus')
+                ->exists();
 
-        Transaction::create([
-            'user_id'     => $user->id,
-            'type'        => 'daily_reward',
-            'amount'      => $rewardCoins,
-            'description' => "Daily reward hari ke-{$streak} (+{$rewardCoins} koin)",
-        ]);
+            if (!$hasReceivedCoinBonus) {
+                $rewardCoins = 10;
+            }
+        }
 
-        // FIX: XP is awarded ONLY via DailyLoginController (prevents double XP)
-        // This endpoint is purely for daily COIN reward.
+        // Record XP
+        $xpRecord = \App\Models\UserXp::firstOrCreate(
+            ['user_id' => $user->id],
+            ['total_xp' => 0, 'level' => 0]
+        );
+        $xpRecord->increment('total_xp', $rewardXp);
+        $newLevel = \App\Models\UserXp::calculateLevel($xpRecord->total_xp);
+        if ($xpRecord->level !== $newLevel) {
+            $xpRecord->update(['level' => $newLevel]);
+        }
+
+        // Add season global XP
+        $season = \App\Models\Season::active()->first();
+        if ($season) {
+            \App\Models\UserSeasonGlobal::updateOrCreate(
+                ['user_id' => $user->id, 'season_id' => $season->id],
+                []
+            )->increment('xp', $rewardXp);
+            Cache::forget("leaderboard:xp:{$season->id}");
+        }
+
+        // Conditionally grant coins
+        if ($rewardCoins > 0) {
+            $user->increment('coins', $rewardCoins);
+            Transaction::create([
+                'user_id'     => $user->id,
+                'type'        => 'daily_reward',
+                'amount'      => $rewardCoins, // only logging the coin transaction amount
+                'description' => "Daily reward hari ke-7 (+10 koin, +70 XP)",
+            ]);
+        } else {
+            Transaction::create([
+                'user_id'     => $user->id,
+                'type'        => 'daily_reward',
+                'amount'      => 0, // 0 coins
+                'description' => "Daily reward hari ke-{$streak} (+{$rewardXp} XP)",
+            ]);
+        }
 
         Notification::create([
             'id'      => Str::uuid(),
             'user_id' => $user->id,
             'type'    => 'daily_reward',
             'title'   => 'Reward Harian Diklaim!',
-            'body'    => "Kamu mendapat {$rewardCoins} koin (streak: {$streak} hari)",
+            'body'    => $rewardCoins > 0
+                ? "Selamat! Streak hari ke-7 memberikan {$rewardCoins} koin & {$rewardXp} XP"
+                : "Kamu mendapat {$rewardXp} XP (streak: {$streak} hari)",
         ]);
 
         return response()->json([
             'message'      => 'Daily reward berhasil diklaim!',
+            'xp_earned'    => $rewardXp,
             'coins_earned' => $rewardCoins,
             'streak'       => $streak,
+            'total_xp'     => $xpRecord->fresh()->total_xp,
             'total_coins'  => $user->fresh()->coins,
         ]);
     }
@@ -217,7 +257,6 @@ class WalletController extends Controller
 
         $claimedToday = in_array(today()->toDateString(), $rewardDates);
 
-        // Calculate streak from the batch
         $streak = 0;
         if ($claimedToday) {
             $streak = 1;
@@ -225,13 +264,25 @@ class WalletController extends Controller
         } else {
             $checkDate = today()->subDay();
         }
-        while (in_array($checkDate->toDateString(), $rewardDates)) {
+
+        // Dynamic streak check since streak can be unbounded
+        while (Transaction::where('user_id', $user->id)
+            ->where('type', 'daily_reward')
+            ->whereDate('created_at', $checkDate)
+            ->exists()
+        ) {
             $streak++;
             $checkDate = $checkDate->subDay();
-            if ($streak >= 7) break;
         }
 
-        $nextRewardCoins = 5 + (($streak + ($claimedToday ? 0 : 1)) * 2);
+        $streakValue = $streak + ($claimedToday ? 0 : 1);
+        $nextRewardXp = $streakValue * 10;
+
+        $hasReceivedCoinBonus = Transaction::where('user_id', $user->id)
+            ->where('type', 'daily_coin_bonus')
+            ->exists();
+
+        $nextRewardCoins = ($streakValue === 7 && !$hasReceivedCoinBonus) ? 10 : 0;
 
         $weekDays = [];
         for ($i = 6; $i >= 0; $i--) {
@@ -244,11 +295,14 @@ class WalletController extends Controller
         }
 
         return response()->json([
-            'streak'          => $streak,
-            'claimed_today'   => $claimedToday,
-            'next_reward'     => $nextRewardCoins,
-            'coins'           => $user->coins,
-            'week_days'       => $weekDays,
+            'streak'                  => $streak,
+            'claimed_today'           => $claimedToday,
+            'next_reward_xp'          => $nextRewardXp,
+            'next_reward_coins'       => $nextRewardCoins,
+            'has_received_coin_bonus' => $hasReceivedCoinBonus,
+            'total_xp'                => $user->xpRecord ? $user->xpRecord->total_xp : 0,
+            'coins'                   => $user->coins,
+            'week_days'               => $weekDays,
         ]);
     }
 

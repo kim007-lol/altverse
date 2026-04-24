@@ -12,6 +12,7 @@ use App\Models\EpisodeXpClaim;
 use App\Services\XpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ReadingController extends Controller
 {
@@ -160,9 +161,11 @@ class ReadingController extends Controller
             ]
         );
 
-        // XP is no longer awarded automatically; it is claimed via the Missions system.
-        // We still track the history above so the Mission system can verify it.
+        // Automatic XP claim if progress >= 100
         $xpAwarded = false;
+        if ($validated['progress'] >= 100) {
+            $xpAwarded = app(\App\Services\MissionService::class)->autoClaimMission($user, 'read_episode');
+        }
 
         return response()->json([
             'message'    => 'Progress tersimpan',
@@ -192,64 +195,73 @@ class ReadingController extends Controller
         return response()->json(['series' => $seriesData]);
     }
 
-    /** Toggle like on Series */
+    /**
+     * Toggle like on Series.
+     * SECURITY: Uses DB::transaction + lockForUpdate to prevent TOCTOU race condition.
+     */
     public function toggleLike(Request $request, Series $series): JsonResponse
     {
         $user = $request->user();
 
-        if ($user->likes()->where('series_id', $series->id)->exists()) {
-            $user->likes()->detach($series->id);
-            // Floor at 0 to prevent negative
-            $series->total_likes = max(0, $series->total_likes - 1);
-            $series->save();
-            return response()->json([
-                'liked' => false,
-                'total_likes' => $series->total_likes,
-            ]);
-        }
+        $result = DB::transaction(function () use ($user, $series) {
+            // Lock series row — concurrent requests will queue here
+            $lockedSeries = Series::lockForUpdate()->find($series->id);
 
-        $user->likes()->attach($series->id);
-        $series->increment('total_likes');
-        return response()->json([
-            'liked' => true,
-            'total_likes' => $series->fresh()->total_likes,
-        ]);
+            $isLiked = $user->likes()->where('series_id', $lockedSeries->id)->exists();
+
+            if ($isLiked) {
+                $user->likes()->detach($lockedSeries->id);
+                $lockedSeries->total_likes = max(0, $lockedSeries->total_likes - 1);
+                $lockedSeries->save();
+                return ['liked' => false, 'total_likes' => $lockedSeries->total_likes];
+            }
+
+            $user->likes()->attach($lockedSeries->id);
+            $lockedSeries->increment('total_likes');
+            return ['liked' => true, 'total_likes' => $lockedSeries->fresh()->total_likes];
+        });
+
+        return response()->json($result);
     }
 
-    /** Toggle like on an Episode (separate from series like) */
+    /**
+     * Toggle like on an Episode (separate from series like).
+     * SECURITY: Uses DB::transaction + lockForUpdate to prevent TOCTOU race condition.
+     */
     public function toggleEpisodeLike(Request $request, Series $series, Episode $episode): JsonResponse
     {
         $user = $request->user();
 
-        $existing = EpisodeLike::where('user_id', $user->id)
-            ->where('episode_id', $episode->id)
-            ->first();
+        $result = DB::transaction(function () use ($user, $episode) {
+            // Lock episode row — concurrent requests will queue here
+            $lockedEpisode = Episode::lockForUpdate()->find($episode->id);
 
-        if ($existing && $existing->is_active) {
-            $existing->update(['is_active' => false]);
-            // Floor at 0 to prevent negative
-            $episode->like_count = max(0, $episode->like_count - 1);
-            $episode->save();
-            return response()->json([
-                'liked' => false,
-                'like_count' => $episode->like_count,
-            ]);
-        }
+            $existing = EpisodeLike::where('user_id', $user->id)
+                ->where('episode_id', $lockedEpisode->id)
+                ->lockForUpdate()
+                ->first();
 
-        if ($existing) {
-            $existing->update(['is_active' => true]);
-        } else {
-            EpisodeLike::create([
-                'user_id' => $user->id,
-                'episode_id' => $episode->id,
-                'is_active' => true,
-            ]);
-        }
+            if ($existing && $existing->is_active) {
+                $existing->update(['is_active' => false]);
+                $lockedEpisode->like_count = max(0, $lockedEpisode->like_count - 1);
+                $lockedEpisode->save();
+                return ['liked' => false, 'like_count' => $lockedEpisode->like_count];
+            }
 
-        $episode->increment('like_count');
-        return response()->json([
-            'liked' => true,
-            'like_count' => $episode->fresh()->like_count,
-        ]);
+            if ($existing) {
+                $existing->update(['is_active' => true]);
+            } else {
+                EpisodeLike::create([
+                    'user_id'    => $user->id,
+                    'episode_id' => $lockedEpisode->id,
+                    'is_active'  => true,
+                ]);
+            }
+
+            $lockedEpisode->increment('like_count');
+            return ['liked' => true, 'like_count' => $lockedEpisode->fresh()->like_count];
+        });
+
+        return response()->json($result);
     }
 }

@@ -156,6 +156,7 @@ class FollowController extends Controller
                 'bio',
                 'author_bio',
                 'social_links',
+                'author_social_links',
                 'author_tier',
                 'followers_count',
                 'series_count',

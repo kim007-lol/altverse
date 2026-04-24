@@ -141,6 +141,7 @@ class AuthController extends Controller
             'theme_preference',
             'bio',
             'social_links',
+            'author_social_links',
             'followers_count',
             'total_views',
             'published_episode_count',
@@ -242,8 +243,9 @@ class AuthController extends Controller
     public function updateProfile(Request $request): JsonResponse
     {
         $user = $request->user();
+        $isAuthor = $user->role === 'author';
 
-        // Pre-process social_links JSON string from multipart into array
+        // Pre-process JSON string from multipart into array
         if ($request->has('social_links') && is_string($request->input('social_links'))) {
             $decoded = json_decode($request->input('social_links'), true);
             if ($decoded !== null) {
@@ -251,17 +253,23 @@ class AuthController extends Controller
             }
         }
 
+        if ($request->has('author_social_links') && is_string($request->input('author_social_links'))) {
+            $decoded = json_decode($request->input('author_social_links'), true);
+            if ($decoded !== null) {
+                $request->merge(['author_social_links' => $decoded]);
+            }
+        }
+
         try {
             $validated = $request->validate([
-                'name'             => ['sometimes', 'string', 'min:2', 'max:255'],
-                'pen_name'         => ['sometimes', 'string', 'max:255'],
-                'bio'              => ['sometimes', 'string', 'max:1000'],
-                'author_bio'       => ['sometimes', 'string', 'max:1000'],
-                'avatar_url'       => ['sometimes', 'string'],
-                'author_avatar_url' => ['sometimes', 'string'],
-                'avatar'           => ['sometimes', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-                'social_links'     => ['sometimes', 'array'],
-                'theme_preference' => ['sometimes', 'in:dark,light'],
+                'name'                 => ['sometimes', 'string', 'min:2', 'max:255'],
+                'pen_name'             => ['sometimes', 'string', 'max:255'],
+                'bio'                  => ['sometimes', 'nullable', 'string', 'max:1000'],
+                'author_bio'           => ['sometimes', 'nullable', 'string', 'max:1000'],
+                'avatar'               => ['sometimes', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+                'social_links'         => ['sometimes', 'nullable', 'array'],
+                'author_social_links'  => ['sometimes', 'nullable', 'array'],
+                'theme_preference'     => ['sometimes', 'in:dark,light'],
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -270,27 +278,35 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Handle avatar file upload
+        // Handle avatar file upload — route to role-specific field
         if ($request->hasFile('avatar')) {
             $file = $request->file('avatar');
             $extension = $file->getClientOriginalExtension();
-            $filename = "avatar_{$user->id}_{$user->id}.{$extension}";
+            $rolePrefix = $isAuthor ? 'author' : 'reader';
+            $filename = "{$rolePrefix}_avatar_{$user->id}.{$extension}";
 
-            // Store directly to Cloudflare R2 (S3 disk)
             $path = $file->storeAs('avatars', $filename, 's3');
 
-            // Save the relative path; frontend will use getImageUrl() or direct URL
-            $validated['avatar_url'] = $path;
+            if ($isAuthor) {
+                $validated['author_avatar_url'] = $path;
+            } else {
+                $validated['avatar_url'] = $path;
+            }
             unset($validated['avatar']);
         }
 
-        // Guard: only allow role-appropriate fields to be updated
-        $readerOnlyFields = ['name', 'bio', 'avatar_url'];
-        $authorOnlyFields = ['pen_name', 'author_bio', 'author_avatar_url'];
-        $sharedFields = ['social_links', 'theme_preference'];
+        // Remove null social_links that was injected for author redirect
+        if (array_key_exists('social_links', $validated) && $validated['social_links'] === null) {
+            unset($validated['social_links']);
+        }
 
-        if ($user->role === 'author') {
-            $allowedFields = array_merge($authorOnlyFields, $sharedFields, ['avatar_url']); // avatar_url allowed for fallback
+        // Guard: strictly allow only role-appropriate fields
+        $readerOnlyFields = ['name', 'bio', 'avatar_url', 'social_links'];
+        $authorOnlyFields = ['pen_name', 'author_bio', 'author_avatar_url', 'author_social_links'];
+        $sharedFields     = ['theme_preference'];
+
+        if ($isAuthor) {
+            $allowedFields = array_merge($authorOnlyFields, $sharedFields);
         } else {
             $allowedFields = array_merge($readerOnlyFields, $sharedFields);
         }
@@ -299,7 +315,7 @@ class AuthController extends Controller
 
         $user->update($filteredData);
 
-        if ($user->role === 'author') {
+        if ($isAuthor) {
             Cache::forget("author:{$user->id}:profile");
         }
 
@@ -318,6 +334,7 @@ class AuthController extends Controller
                 'bio',
                 'author_bio',
                 'social_links',
+                'author_social_links',
                 'coins',
                 'level',
                 'theme_preference',

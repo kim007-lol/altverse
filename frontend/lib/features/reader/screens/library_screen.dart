@@ -196,8 +196,7 @@ class _LibraryScreenState extends State<LibraryScreen>
           final series = item['series'];
           final episode = item['episode'];
           final author = series?['author'];
-          final authorName =
-              author?['pen_name'] ?? author?['name'] ?? 'Unknown';
+          final authorName = author?['pen_name'] ?? 'Unknown';
           final coverUrl = ApiService.getImageUrl(series?['cover_url']);
           final timeAgo = _formatTimeAgo(item['read_at']);
           final epTitle =
@@ -217,7 +216,9 @@ class _LibraryScreenState extends State<LibraryScreen>
                   MaterialPageRoute(
                     builder: (_) => SeriesDetailScreen(seriesId: seriesId),
                   ),
-                );
+                ).then((_) {
+                  if (mounted) _fetchHistory();
+                });
               }
             },
           );
@@ -248,8 +249,7 @@ class _LibraryScreenState extends State<LibraryScreen>
         itemBuilder: (context, i) {
           final series = _bookmarks[i];
           final author = series['author'];
-          final authorName =
-              author?['pen_name'] ?? author?['name'] ?? 'Unknown';
+          final authorName = author?['pen_name'] ?? 'Unknown';
           final coverUrl = ApiService.getImageUrl(series['cover_url']);
           final rawGenre = series['genre'];
           final List<String> genres;
@@ -276,7 +276,9 @@ class _LibraryScreenState extends State<LibraryScreen>
                   MaterialPageRoute(
                     builder: (_) => SeriesDetailScreen(seriesId: seriesId),
                   ),
-                );
+                ).then((_) {
+                  if (mounted) _fetchBookmarks();
+                });
               }
             },
           );
@@ -308,8 +310,7 @@ class _LibraryScreenState extends State<LibraryScreen>
           final episode = _unlocked[i];
           final series = episode['series'];
           final author = series?['author'];
-          final authorName =
-              author?['pen_name'] ?? author?['name'] ?? 'Unknown';
+          final authorName = author?['pen_name'] ?? 'Unknown';
           final coverUrl = ApiService.getImageUrl(series?['cover_url']);
 
           final epTitle =
@@ -329,7 +330,9 @@ class _LibraryScreenState extends State<LibraryScreen>
                   MaterialPageRoute(
                     builder: (_) => SeriesDetailScreen(seriesId: seriesId),
                   ),
-                );
+                ).then((_) {
+                  if (mounted) _fetchUnlocked();
+                });
               }
             },
           );

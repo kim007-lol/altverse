@@ -18,18 +18,18 @@ class DailyLoginController extends Controller
     {
         $user = $request->user();
         $cacheKey = "daily_login:{$user->id}:" . now()->toDateString();
+        $secondsUntilMidnight = now()->endOfDay()->diffInSeconds(now());
 
-        // Already claimed today
-        if (Cache::has($cacheKey)) {
+        // SECURITY FIX: Use atomic Cache::add to prevent TOCTOU race condition.
+        // Cache::add returns false if the key already exists (concurrent requests will fail here).
+        $isFirstClaimToday = Cache::add($cacheKey, true, $secondsUntilMidnight);
+
+        if (!$isFirstClaimToday) {
             return response()->json([
                 'message' => 'Daily reward sudah diklaim hari ini',
                 'already_claimed' => true,
             ]);
         }
-
-        // Mark as claimed for today (expires at midnight)
-        $secondsUntilMidnight = now()->endOfDay()->diffInSeconds(now());
-        Cache::put($cacheKey, true, $secondsUntilMidnight);
 
         return response()->json([
             'message' => 'Daily login berhasil!',

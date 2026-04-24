@@ -352,7 +352,7 @@ class _ReaderHomeScreenState extends State<ReaderHomeScreen> {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
-                                      'by ${s['author']['pen_name'] ?? s['author']['name'] ?? ''}',
+                                      'by ${s['author']['pen_name'] ?? 'Unknown'}',
                                       style: const TextStyle(
                                         color: Colors.white60,
                                         fontSize: 12,
@@ -452,7 +452,7 @@ class _ReaderHomeScreenState extends State<ReaderHomeScreen> {
         : null;
     final title = series['title'] ?? '';
     final author = series['author'];
-    final authorName = author?['pen_name'] ?? author?['name'] ?? '';
+    final authorName = author?['pen_name'] ?? 'Unknown';
 
     return GestureDetector(
       onTap: () {

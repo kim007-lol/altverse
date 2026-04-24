@@ -14,7 +14,6 @@ class _MissionsScreenState extends State<MissionsScreen> {
   bool _isLoading = true;
   bool _hasError = false;
   List<dynamic> _missions = [];
-  bool _isClaiming = false;
 
   @override
   void initState() {
@@ -41,44 +40,6 @@ class _MissionsScreenState extends State<MissionsScreen> {
       }
     } catch (_) {
       if (mounted) setState(() => _hasError = true);
-    }
-  }
-
-  Future<void> _claimMission(String code) async {
-    if (_isClaiming) return;
-    setState(() => _isClaiming = true);
-
-    try {
-      final res = await ApiService.post(ApiEndpoints.claimMission(code), {});
-
-      if (!mounted) return;
-
-      final body = jsonDecode(res.body);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            body['message'] ??
-                (res.statusCode == 200 ? 'Klaim berhasil' : 'Gagal klaim'),
-          ),
-          backgroundColor: res.statusCode == 200 ? Colors.green : Colors.red,
-        ),
-      );
-
-      if (res.statusCode == 200) {
-        _fetchMissions(); // Refresh mission data
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Terjadi kesalahan jaringan'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isClaiming = false);
     }
   }
 
@@ -191,7 +152,6 @@ class _MissionsScreenState extends State<MissionsScreen> {
             final claimsToday = m['claims_today'] ?? 0;
             final dailyLimit = m['daily_limit'];
             final canClaim = m['can_claim'] == true;
-            final isOnCooldown = m['is_on_cooldown'] == true;
 
             return Card(
               elevation: 0,
@@ -257,37 +217,23 @@ class _MissionsScreenState extends State<MissionsScreen> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: (!canClaim || _isClaiming)
-                          ? null
-                          : () => _claimMission(m['code']),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: canClaim
-                            ? Theme.of(context).primaryColor
-                            : Colors.grey[300],
-                        foregroundColor: canClaim
-                            ? Colors.white
-                            : Colors.grey[600],
-                        elevation: canClaim ? 2 : 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: _isClaiming && canClaim /* simplistic check */
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              isOnCooldown
-                                  ? 'Tunggu'
-                                  : (canClaim ? 'Klaim' : 'Selesai'),
+                    canClaim
+                        ? Text(
+                            'Belum Selesai',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
                             ),
-                    ),
+                          )
+                        : Text(
+                            'Selesai',
+                            style: TextStyle(
+                              color: Theme.of(context).primaryColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ],
                 ),
               ),

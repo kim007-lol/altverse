@@ -149,7 +149,7 @@ class _FollowingScreenState extends State<FollowingScreen> {
           return _AuthorTile(
             id: author['id'] ?? 0,
             name: author['name'] ?? '',
-            penName: author['pen_name'] ?? author['name'] ?? '',
+            penName: author['pen_name'] ?? 'Unknown',
             avatarUrl: author['avatar_url'],
             followersCount: author['followers_count'] ?? 0,
             seriesCount: author['series_count'] ?? 0,

@@ -521,7 +521,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ..._userResults.map((user) {
           final u = user as Map<String, dynamic>;
           final avatarUrl = ApiService.getImageUrl(u['avatar_url']);
-          final name = u['pen_name'] ?? u['name'] ?? 'User';
+          final name = u['pen_name'] ?? 'Unknown';
           final handle = u['name'] ?? '';
           final role = u['role'] ?? 'reader';
           final level = u['level'] ?? 0;
@@ -716,7 +716,7 @@ class _RankCard extends StatelessWidget {
     final title = series['title'] ?? 'No Title';
     final authorData = series['author'];
     final authorName = authorData != null
-        ? (authorData['pen_name'] ?? authorData['name'] ?? 'Unknown')
+        ? (authorData['pen_name'] ?? 'Unknown')
         : 'Unknown';
     final genre = series['genre'] ?? '';
     final episodesCount = series['episodes_count'] ?? 0;

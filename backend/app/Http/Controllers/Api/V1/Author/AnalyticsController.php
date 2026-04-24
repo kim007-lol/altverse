@@ -94,9 +94,9 @@ class AnalyticsController extends Controller
 
             $viewsRaw = ViewLog::whereIn('series_id', $seriesIds)
                 ->where('viewed_date', '>=', $from)
-                ->select(DB::raw('viewed_date as date, COUNT(*) as views'))
-                ->groupBy('viewed_date')
-                ->orderBy('viewed_date')
+                ->select(DB::raw('DATE(viewed_date) as date, COUNT(*) as views'))
+                ->groupBy(DB::raw('DATE(viewed_date)'))
+                ->orderBy(DB::raw('DATE(viewed_date)'))
                 ->get()
                 ->keyBy('date');
 
@@ -106,7 +106,7 @@ class AnalyticsController extends Controller
             for ($i = $range - 1; $i >= 0; $i--) {
                 $date = now()->subDays($i)->toDateString();
                 $labels[] = $date;
-                $views[]  = $viewsRaw->has($date) ? (int) $viewsRaw[$date]->views : 0;
+                $views[]  = isset($viewsRaw[$date]) ? (int) $viewsRaw[$date]->views : 0;
             }
 
             return [

@@ -135,19 +135,74 @@ class MissionService
                 'code' => 200
             ];
         });
+    }
 
-        $userXp = UserXp::find($user->id);
+    /**
+     * Auto-claim a mission synchronously without throwing HTTP exceptions/status codes.
+     */
+    public function autoClaimMission(User $user, string $missionCode): bool
+    {
+        $mission = Mission::where('code', $missionCode)->where('is_active', true)->first();
+        if (!$mission) return false;
 
-        return [
-            'success' => true,
-            'message' => 'Misi berhasil diklaim!',
-            'data' => [
-                'xp_awarded' => $mission->xp_reward,
-                'total_xp' => $userXp->total_xp,
-                'level' => $userXp->level,
-            ],
-            'code' => 200
-        ];
+        $today = now()->toDateString();
+
+        try {
+            return DB::transaction(function () use ($user, $mission, $missionCode, $today) {
+                $record = UserXp::lockForUpdate()->firstOrCreate(
+                    ['user_id' => $user->id],
+                    ['total_xp' => 0, 'level' => 0]
+                );
+
+                $claimsToday = UserMission::where('user_id', $user->id)
+                    ->where('mission_id', $mission->id)
+                    ->whereDate('created_at', $today)
+                    ->count();
+
+                if ($mission->daily_limit !== null && $claimsToday >= $mission->daily_limit) {
+                    return false;
+                }
+
+                $lastClaim = UserMission::where('user_id', $user->id)
+                    ->where('mission_id', $mission->id)
+                    ->latest()
+                    ->first();
+
+                if ($lastClaim && $mission->cooldown_seconds) {
+                    if ($lastClaim->created_at->addSeconds($mission->cooldown_seconds)->isFuture()) {
+                        return false;
+                    }
+                }
+
+                if (!$this->verifyMissionCompletion($user, $missionCode, $today, $claimsToday)) {
+                    return false;
+                }
+
+                UserMission::create([
+                    'user_id' => $user->id,
+                    'mission_id' => $mission->id,
+                ]);
+
+                $record->increment('total_xp', $mission->xp_reward);
+                $newLevel = UserXp::calculateLevel($record->total_xp);
+                if ($record->level !== $newLevel) {
+                    $record->update(['level' => $newLevel]);
+                }
+
+                $season = Season::active()->first();
+                if ($season) {
+                    UserSeasonGlobal::updateOrCreate(
+                        ['user_id' => $user->id, 'season_id' => $season->id],
+                        []
+                    )->increment('xp', $mission->xp_reward);
+                    Cache::forget("leaderboard:xp:{$season->id}");
+                }
+
+                return true;
+            });
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     /**
@@ -156,10 +211,6 @@ class MissionService
     private function verifyMissionCompletion(User $user, string $code, string $today, int $claimsToday): bool
     {
         return match ($code) {
-            'daily_login' => $user->transactions()
-                ->where('type', 'daily_reward')
-                ->whereDate('created_at', $today)
-                ->exists(), // Must have actually claimed daily reward today
             'read_episode' => ReadingHistory::where('user_id', $user->id)->whereDate('read_at', $today)->where('progress', '>=', 100)->count() > $claimsToday,
             'post_comment' => Comment::where('user_id', $user->id)->whereDate('created_at', $today)->count() > $claimsToday,
             default => false,

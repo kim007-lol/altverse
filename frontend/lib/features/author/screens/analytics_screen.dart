@@ -979,32 +979,34 @@ class _TrendChartPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
 
     final path = Path();
-    for (var i = 0; i < points.length; i++) {
-      if (i == 0) {
-        path.moveTo(points[i].dx, points[i].dy);
-      } else {
-        // Smooth curve
-        final prev = points[i - 1];
-        final curr = points[i];
-        final cx = (prev.dx + curr.dx) / 2;
-        path.cubicTo(cx, prev.dy, cx, curr.dy, curr.dx, curr.dy);
+    if (points.isNotEmpty) {
+      for (var i = 0; i < points.length; i++) {
+        if (i == 0) {
+          path.moveTo(points[i].dx, points[i].dy);
+        } else {
+          // Smooth curve
+          final prev = points[i - 1];
+          final curr = points[i];
+          final cx = (prev.dx + curr.dx) / 2;
+          path.cubicTo(cx, prev.dy, cx, curr.dy, curr.dx, curr.dy);
+        }
       }
+      canvas.drawPath(path, linePaint);
+
+      // Fill gradient below line
+      final fillPaint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [color.withAlpha(60), color.withAlpha(5)],
+        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+      final fillPath = Path.from(path)
+        ..lineTo(points.last.dx, size.height)
+        ..lineTo(points.first.dx, size.height)
+        ..close();
+      canvas.drawPath(fillPath, fillPaint);
     }
-    canvas.drawPath(path, linePaint);
-
-    // Fill gradient below line
-    final fillPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [color.withAlpha(60), color.withAlpha(5)],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    final fillPath = Path.from(path)
-      ..lineTo(points.last.dx, size.height)
-      ..lineTo(points.first.dx, size.height)
-      ..close();
-    canvas.drawPath(fillPath, fillPaint);
 
     // Dots
     final dotPaint = Paint()..color = color;

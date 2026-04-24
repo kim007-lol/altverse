@@ -13,7 +13,9 @@ import '../../features/author/screens/series_management_screen.dart';
 import '../../features/author/screens/create_series_screen.dart';
 import '../../features/author/screens/analytics_screen.dart';
 import '../../features/author/screens/au_builder_placeholder_screen.dart';
-import '../../features/auth/screens/profile_screen.dart';
+import '../../features/auth/screens/login_screen.dart';
+import '../../features/reader/screens/reader_profile_screen.dart';
+import '../../features/reader/screens/author_profile_screen.dart';
 
 class MasterScreen extends StatefulWidget {
   final String role;
@@ -280,20 +282,32 @@ class _MasterScreenState extends State<MasterScreen> {
     _fetchCounts();
   }
 
-  List<Widget> _readerTabs(String role) => [
-    const ReaderHomeScreen(),
-    const SearchScreen(),
-    const LeaderboardScreen(),
-    const LibraryScreen(),
-    ProfileScreen(role: role),
-  ];
+  List<Widget> _readerTabs(String role) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.user?['id'];
+    return [
+      const ReaderHomeScreen(),
+      const SearchScreen(),
+      const LeaderboardScreen(),
+      const LibraryScreen(),
+      userId != null
+          ? ReaderProfileScreen(userId: userId)
+          : const LoginScreen(),
+    ];
+  }
 
-  List<Widget> _authorTabs(String role) => [
-    AuthorDashboardScreen(key: _dashboardKey),
-    const SeriesManagementScreen(),
-    const AnalyticsScreen(),
-    ProfileScreen(role: role),
-  ];
+  List<Widget> _authorTabs(String role) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.user?['id'];
+    return [
+      AuthorDashboardScreen(key: _dashboardKey),
+      const SeriesManagementScreen(),
+      const AnalyticsScreen(),
+      userId != null
+          ? AuthorProfileScreen(authorId: userId)
+          : const LoginScreen(),
+    ];
+  }
 
   NavigationBarThemeData _navBarThemeData(ThemeData theme) {
     return NavigationBarThemeData(

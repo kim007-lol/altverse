@@ -1,7 +1,13 @@
 import 'dart:convert';
+import 'package:go_router/go_router.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:provider/provider.dart';
+import '../../../core/services/auth_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../shared/widgets/au_card.dart';
@@ -25,6 +31,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
   List<dynamic> _series = [];
   List<dynamic> _topSupporters = [];
   bool _isFollowing = false;
+  bool _isSelf = false;
   late TabController _tabController;
 
   @override
@@ -58,6 +65,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
           _series = data['series'] ?? [];
           _topSupporters = data['top_supporters'] ?? [];
           _isFollowing = data['is_following'] ?? false;
+          _isSelf = data['is_self'] ?? false;
           _isLoading = false;
         });
       } else if (mounted) {
@@ -173,8 +181,8 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
     }
 
     final penName = _author!['pen_name'] ?? 'Author';
-    final bio = _author!['author_bio'] ?? _author!['bio'] ?? '';
-    final rawAvatar = _author!['author_avatar_url'] ?? _author!['avatar_url'];
+    final bio = _author!['author_bio'] ?? '';
+    final rawAvatar = _author!['author_avatar_url'];
     final avatarUrl = rawAvatar != null
         ? ApiService.getImageUrl(rawAvatar)
         : '';
@@ -188,13 +196,16 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
         .toList();
 
     final highestBadge = _author!['highest_badge'];
-    final socialLinks = _parseSocialLinks(_author!['social_links']);
+    final socialLinks = _parseSocialLinks(_author!['author_social_links']);
     final followersCount = _author!['followers_count'] ?? 0;
     final seriesCount = _author!['series_count'] ?? 0;
     final totalViews = _author!['total_views'] ?? 0;
     final isVerified =
         _author!['is_verified'] == true || _author!['is_verified'] == 1;
     final canTip = _author!['can_tip'] == true || _author!['can_tip'] == 1;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final canEditProfile = _isSelf && authProvider.user?['role'] == 'author';
 
     return Scaffold(
       body: NestedScrollView(
@@ -403,75 +414,128 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
 
                 const SizedBox(height: 24),
 
-                // Follow + Tip buttons
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 400),
+                // Follow + Tip buttons (other user) OR Edit/Share (self)
+                if (canEditProfile) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: FilledButton.icon(
-                            onPressed: _toggleFollow,
-                            icon: Icon(
-                              _isFollowing
-                                  ? Icons.check
-                                  : Icons.person_add_alt_1,
-                              size: 20,
-                            ),
-                            label: Text(
-                              _isFollowing ? 'Following' : 'Follow',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: _isFollowing
-                                  ? theme.cardColor
-                                  : theme.primaryColor,
-                              foregroundColor: _isFollowing
-                                  ? theme.textTheme.bodyLarge?.color
-                                  : Colors.white,
-                              side: _isFollowing
-                                  ? BorderSide(color: Colors.grey.withAlpha(50))
-                                  : null,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: OutlinedButton.icon(
+                            onPressed: () =>
+                                _showEditProfileSheet(context, theme, _author),
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            label: const Text('Edit Profile'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                           ),
                         ),
-                        if (canTip) ...[
-                          const SizedBox(width: 12),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              // TODO: navigate to tip screen
-                            },
-                            icon: const Icon(
-                              Icons.monetization_on_outlined,
-                              size: 18,
+                        const SizedBox(width: 12),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final url =
+                                'https://aureader.com/author/${widget.authorId}';
+                            // ignore: deprecated_member_use
+                            await Share.share(
+                              'Check out my profile on AU Reader!\n$url',
+                              subject: 'AU Reader Author Profile',
+                            );
+                          },
+                          icon: const Icon(Icons.share_outlined, size: 18),
+                          label: const Text('Share'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 14,
                             ),
-                            label: const Text('Tip'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.orange,
-                              side: const BorderSide(color: Colors.orange),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 16,
-                                horizontal: 24,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                        ],
+                        ),
                       ],
                     ),
                   ),
-                ),
+                ] else ...[
+                  // Follow + Tip buttons (other user view)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: _toggleFollow,
+                              icon: Icon(
+                                _isFollowing
+                                    ? Icons.check
+                                    : Icons.person_add_alt_1,
+                                size: 20,
+                              ),
+                              label: Text(
+                                _isFollowing ? 'Following' : 'Follow',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: _isFollowing
+                                    ? theme.cardColor
+                                    : theme.primaryColor,
+                                foregroundColor: _isFollowing
+                                    ? theme.textTheme.bodyLarge?.color
+                                    : Colors.white,
+                                side: _isFollowing
+                                    ? BorderSide(
+                                        color: Colors.grey.withAlpha(50),
+                                      )
+                                    : null,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (canTip) ...[
+                            const SizedBox(width: 12),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                // TODO: navigate to tip screen
+                              },
+                              icon: const Icon(
+                                Icons.monetization_on_outlined,
+                                size: 18,
+                              ),
+                              label: const Text('Tip'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.orange,
+                                side: const BorderSide(color: Colors.orange),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                  horizontal: 24,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
 
                 // Achievements section
                 if (_badges.isNotEmpty) ...[
@@ -548,6 +612,80 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                   ),
                 ],
 
+                // ═══════════════════════════════════════
+                // SELF-VIEW: Settings section
+                // ═══════════════════════════════════════
+                if (canEditProfile) ...[
+                  const SizedBox(height: 16),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Settings',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                  _buildSettingsTile(
+                    icon: Icons.published_with_changes_rounded,
+                    iconColor: Colors.blue[600]!,
+                    title: 'Switch to Reader',
+                    subtitle: 'Browse series and earn XP',
+                    onTap: () {
+                      final authProv = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      );
+                      showDialog(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: const Text('Switch to Reader'),
+                          content: const Text(
+                            'Change role to Reader? You can switch back anytime.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancel'),
+                            ),
+                            FilledButton(
+                              onPressed: () async {
+                                Navigator.pop(context);
+                                await authProv.switchRole(role: 'reader');
+                              },
+                              child: const Text('Switch Role'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  _buildSettingsTile(
+                    icon: Icons.settings_rounded,
+                    iconColor: Colors.grey[700]!,
+                    title: 'Settings',
+                    onTap: () {},
+                  ),
+                  _buildSettingsTile(
+                    icon: Icons.logout_rounded,
+                    iconColor: Colors.red[600]!,
+                    title: 'Logout',
+                    onTap: () async {
+                      final authProv = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      );
+                      await authProv.logout();
+                      if (context.mounted) context.go('/login');
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 const SizedBox(height: 8),
               ],
             ),
@@ -591,42 +729,59 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
 
   // ─── Social Links Row ───
   Widget _buildSocialLinks(Map<String, dynamic> links, ThemeData theme) {
+    String getUrl(String key) {
+      final val = links[key];
+      if (val is Map) {
+        if (val['is_visible'] == false || val['is_visible'] == 'false') {
+          return '';
+        }
+        return val['url']?.toString() ?? '';
+      }
+      if (val is String) return val;
+      return '';
+    }
+
     final socialItems = <Map<String, dynamic>>[];
-    if (links['instagram'] != null &&
-        links['instagram'].toString().isNotEmpty) {
+
+    final igUrl = getUrl('instagram');
+    if (igUrl.isNotEmpty) {
       socialItems.add({
         'icon': Icons.camera_alt_outlined,
-        'url': links['instagram'],
+        'url': igUrl,
         'label': 'IG',
       });
     }
-    if (links['tiktok'] != null && links['tiktok'].toString().isNotEmpty) {
+
+    final tiktokUrl = getUrl('tiktok');
+    if (tiktokUrl.isNotEmpty) {
       socialItems.add({
         'icon': Icons.music_note_outlined,
-        'url': links['tiktok'],
+        'url': tiktokUrl,
         'label': 'TikTok',
       });
     }
-    if (links['wattpad'] != null && links['wattpad'].toString().isNotEmpty) {
+
+    final wattpadUrl = getUrl('wattpad');
+    if (wattpadUrl.isNotEmpty) {
       socialItems.add({
         'icon': Icons.auto_stories_outlined,
-        'url': links['wattpad'],
+        'url': wattpadUrl,
         'label': 'Wattpad',
       });
     }
-    if (links['twitter'] != null && links['twitter'].toString().isNotEmpty) {
+
+    final twitterUrl = getUrl('twitter');
+    if (twitterUrl.isNotEmpty) {
       socialItems.add({
         'icon': Icons.alternate_email,
-        'url': links['twitter'],
+        'url': twitterUrl,
         'label': 'X',
       });
     }
-    if (links['website'] != null && links['website'].toString().isNotEmpty) {
-      socialItems.add({
-        'icon': Icons.language,
-        'url': links['website'],
-        'label': 'Web',
-      });
+
+    final webUrl = getUrl('website');
+    if (webUrl.isNotEmpty) {
+      socialItems.add({'icon': Icons.language, 'url': webUrl, 'label': 'Web'});
     }
 
     if (socialItems.isEmpty) return const SizedBox.shrink();
@@ -641,8 +796,14 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
             onTap: () {
               final url = item['url'].toString();
               if (url.isNotEmpty) {
-                launchUrl(
-                  Uri.parse(url.startsWith('http') ? url : 'https://$url'),
+                final uri = Uri.parse(
+                  url.startsWith('http') ? url : 'https://$url',
+                );
+                launchUrl(uri, mode: LaunchMode.externalApplication).catchError(
+                  (e) {
+                    debugPrint('Gagal membuka URL: $e');
+                    return false;
+                  },
                 );
               }
             },
@@ -874,7 +1035,6 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
   // ─── About Tab ───
   Widget _buildAboutTab(ThemeData theme) {
     final bio = _author!['bio'] ?? 'No bio available.';
-    final socialLinks = _parseSocialLinks(_author!['social_links']);
     final tier = _author!['author_tier'];
 
     return SingleChildScrollView(
@@ -929,41 +1089,6 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
             Colors.teal,
             theme,
           ),
-
-          if (socialLinks.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            const Text(
-              'Social Links',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ...socialLinks.entries
-                .where((e) => e.value != null && e.value.toString().isNotEmpty)
-                .map(
-                  (e) => ListTile(
-                    leading: Icon(
-                      _socialIcon(e.key),
-                      color: theme.primaryColor,
-                    ),
-                    title: Text(
-                      e.key[0].toUpperCase() + e.key.substring(1),
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    subtitle: Text(
-                      e.value.toString(),
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                    ),
-                    onTap: () {
-                      final url = e.value.toString();
-                      launchUrl(
-                        Uri.parse(
-                          url.startsWith('http') ? url : 'https://$url',
-                        ),
-                      );
-                    },
-                  ),
-                ),
-          ],
         ],
       ),
     );
@@ -1007,24 +1132,6 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
         ],
       ),
     );
-  }
-
-  IconData _socialIcon(String key) {
-    switch (key.toLowerCase()) {
-      case 'instagram':
-        return Icons.camera_alt_outlined;
-      case 'tiktok':
-        return Icons.music_note_outlined;
-      case 'twitter':
-      case 'x':
-        return Icons.alternate_email;
-      case 'wattpad':
-        return Icons.auto_stories_outlined;
-      case 'website':
-        return Icons.language;
-      default:
-        return Icons.link;
-    }
   }
 
   void _showBadgeDetail(
@@ -1087,6 +1194,366 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
         ),
       ),
     );
+  }
+
+  // ─── Settings tile (for self-view) ───
+  Widget _buildSettingsTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    String? subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: iconColor.withAlpha(20),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: iconColor, size: 24),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+      ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+            )
+          : null,
+      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+      onTap: onTap,
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // EDIT PROFILE BOTTOM SHEET
+  // ══════════════════════════════════════════════════════════
+  void _showEditProfileSheet(
+    BuildContext ctx,
+    ThemeData theme,
+    Map<String, dynamic>? user,
+  ) {
+    final penNameCtrl = TextEditingController(text: user?['pen_name'] ?? '');
+    final bioCtrl = TextEditingController(text: user?['author_bio'] ?? '');
+
+    final socialLinks = user?['author_social_links'];
+    Map<String, dynamic> links = {};
+    if (socialLinks != null) {
+      links = socialLinks is String
+          ? jsonDecode(socialLinks)
+          : Map<String, dynamic>.from(socialLinks);
+    }
+
+    final igCtrl = TextEditingController(text: _extractUrl(links, 'instagram'));
+    final tiktokCtrl = TextEditingController(
+      text: _extractUrl(links, 'tiktok'),
+    );
+    final wattpadCtrl = TextEditingController(
+      text: _extractUrl(links, 'wattpad'),
+    );
+    final webCtrl = TextEditingController(text: _extractUrl(links, 'website'));
+
+    final avatarUrl = user?['author_avatar_url'] ?? '';
+    final selectedAvatar = ValueNotifier<File?>(null);
+    final isSaving = ValueNotifier<bool>(false);
+
+    showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          20,
+          24,
+          MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Edit Profile',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Avatar Picker ──
+              Center(
+                child: ValueListenableBuilder<File?>(
+                  valueListenable: selectedAvatar,
+                  builder: (context, file, _) {
+                    return GestureDetector(
+                      onTap: () async {
+                        final source = await showModalBottomSheet<ImageSource>(
+                          context: context,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
+                          ),
+                          builder: (c) => SafeArea(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ListTile(
+                                  leading: const Icon(Icons.camera_alt),
+                                  title: const Text('Kamera'),
+                                  onTap: () =>
+                                      Navigator.pop(c, ImageSource.camera),
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.photo_library),
+                                  title: const Text('Galeri'),
+                                  onTap: () =>
+                                      Navigator.pop(c, ImageSource.gallery),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                        if (source != null) {
+                          final picked = await ImagePicker().pickImage(
+                            source: source,
+                            maxWidth: 512,
+                            maxHeight: 512,
+                            imageQuality: 85,
+                          );
+                          if (picked != null) {
+                            selectedAvatar.value = File(picked.path);
+                          }
+                        }
+                      },
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 52,
+                            backgroundColor: Colors.grey[200],
+                            backgroundImage: file != null
+                                ? FileImage(file)
+                                : (avatarUrl.isNotEmpty
+                                          ? NetworkImage(
+                                              ApiService.getImageUrl(avatarUrl),
+                                            )
+                                          : null)
+                                      as ImageProvider?,
+                            child: file == null && avatarUrl.isEmpty
+                                ? Icon(
+                                    Icons.person,
+                                    size: 52,
+                                    color: Colors.grey[400],
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: theme.primaryColor,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              _editField('Pen Name', penNameCtrl),
+              _editField('Bio', bioCtrl, maxLines: 3),
+              const SizedBox(height: 8),
+              const Text(
+                'Social Links',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              _editField('Instagram URL', igCtrl),
+              _editField('TikTok URL', tiktokCtrl),
+              _editField('Wattpad URL', wattpadCtrl),
+              _editField('Website URL', webCtrl),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: isSaving,
+                  builder: (context, saving, _) {
+                    return FilledButton(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              isSaving.value = true;
+                              try {
+                                final fields = <String, String>{
+                                  'pen_name': penNameCtrl.text.trim(),
+                                  'author_bio': bioCtrl.text.trim(),
+                                  'author_social_links': jsonEncode({
+                                    'instagram': {
+                                      'url': igCtrl.text.trim(),
+                                      'is_visible': igCtrl.text
+                                          .trim()
+                                          .isNotEmpty,
+                                    },
+                                    'tiktok': {
+                                      'url': tiktokCtrl.text.trim(),
+                                      'is_visible': tiktokCtrl.text
+                                          .trim()
+                                          .isNotEmpty,
+                                    },
+                                    'wattpad': {
+                                      'url': wattpadCtrl.text.trim(),
+                                      'is_visible': wattpadCtrl.text
+                                          .trim()
+                                          .isNotEmpty,
+                                    },
+                                    'website': {
+                                      'url': webCtrl.text.trim(),
+                                      'is_visible': webCtrl.text
+                                          .trim()
+                                          .isNotEmpty,
+                                    },
+                                  }),
+                                };
+
+                                final files = <String, File>{};
+                                if (selectedAvatar.value != null) {
+                                  files['avatar'] = selectedAvatar.value!;
+                                }
+
+                                final response = await ApiService.multipart(
+                                  ApiEndpoints.updateProfile,
+                                  method: 'PUT',
+                                  fields: fields,
+                                  files: files,
+                                );
+
+                                if (response.statusCode == 200) {
+                                  if (ctx.mounted) Navigator.pop(ctx);
+                                  _fetchProfile();
+                                } else {
+                                  debugPrint(
+                                    'Profile update failed: ${response.body}',
+                                  );
+                                  if (ctx.mounted) {
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Gagal: ${response.body}',
+                                        ),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              } catch (e) {
+                                debugPrint('Profile update error: $e');
+                                if (ctx.mounted) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                isSaving.value = false;
+                              }
+                            },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: saving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Simpan'),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _editField(
+    String label,
+    TextEditingController ctrl, {
+    int maxLines = 1,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: ctrl,
+        maxLines: maxLines,
+        style: const TextStyle(fontSize: 14),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(fontSize: 13, color: Colors.grey[600]),
+          filled: true,
+          fillColor: Colors.grey[100],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _extractUrl(Map<String, dynamic> links, String key) {
+    final val = links[key];
+    if (val is Map) return val['url']?.toString() ?? '';
+    if (val is String) return val;
+    return '';
   }
 }
 
