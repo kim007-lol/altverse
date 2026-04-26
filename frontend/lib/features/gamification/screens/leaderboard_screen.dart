@@ -1,4 +1,4 @@
-import 'dart:convert';
+// leaderboard_screen.dart
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
@@ -48,17 +48,17 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
       if (mounted) {
         setState(() {
-          _overview = jsonDecode(results[0].body);
-          final xpBody = jsonDecode(results[1].body);
+          _overview = results[0].data is Map<String, dynamic> ? results[0].data : {};
+          final xpBody = results[1].data;
           _topXp = xpBody['data'] ?? [];
           _season = xpBody['season'];
 
-          final supporterBody = jsonDecode(results[2].body);
+          final supporterBody = results[2].data;
           _topSupporters = supporterBody['data'] ?? [];
           // Use season from supporter if xp didn't have one
           _season ??= supporterBody['season'];
 
-          final authorBody = jsonDecode(results[3].body);
+          final authorBody = results[3].data;
           _topAuthors = authorBody['data'] ?? [];
           _season ??= authorBody['season'];
 
@@ -138,7 +138,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey[900],
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
                 if (_season != null)
@@ -334,13 +334,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         itemCount: items.length,
         itemBuilder: (context, index) {
           final item = items[index];
-          return _buildRankTile(item, index + 1, type);
+          return _buildRankTile(item, index + 1, type, Theme.of(context));
         },
       ),
     );
   }
 
-  Widget _buildRankTile(Map<String, dynamic> item, int rank, String type) {
+  Widget _buildRankTile(Map<String, dynamic> item, int rank, String type, ThemeData theme) {
     // Extract user data (shape differs between endpoints)
     final userData = item['user'] ?? item['author'] ?? item;
     final name = userData['pen_name'] ?? userData['name'] ?? 'User';
@@ -456,7 +456,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: Colors.purple[400],
+                      color: theme.primaryColor,
                     ),
                   ),
                 ] else if (badgeName != null) ...[

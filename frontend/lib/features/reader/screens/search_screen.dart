@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/services/api_service.dart';
@@ -46,11 +45,7 @@ class _SearchScreenState extends State<SearchScreen> {
   ];
 
   static const _sortOptions = [
-    {
-      'key': 'trending',
-      'label': 'Trending',
-      'icon': Icons.local_fire_department,
-    },
+    {'key': 'trending', 'label': 'Trending', 'icon': Icons.local_fire_department},
     {'key': 'popular', 'label': 'Most Popular', 'icon': Icons.emoji_events},
     {'key': 'new', 'label': 'Terbaru', 'icon': Icons.new_releases},
     {'key': 'liked', 'label': 'Most Liked', 'icon': Icons.favorite},
@@ -73,8 +68,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   // ─── Infinite scroll ───
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >=
-            _scrollCtrl.position.maxScrollExtent - 200 &&
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200 &&
         !_isLoadingMore &&
         _currentPage < _lastPage) {
       _loadMore();
@@ -100,10 +94,7 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final params = <String, String>{
-        'sort': _sortBy,
-        'page': _currentPage.toString(),
-      };
+      final params = <String, String>{'sort': _sortBy, 'page': _currentPage.toString()};
       if (_searchCtrl.text.trim().isNotEmpty) {
         params['q'] = _searchCtrl.text.trim();
       }
@@ -111,17 +102,12 @@ class _SearchScreenState extends State<SearchScreen> {
         params['genre'] = _selectedGenre;
       }
 
-      final qs = params.entries
-          .map(
-            (e) =>
-                '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}',
-          )
-          .join('&');
+      final qs = params.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&');
 
       final response = await ApiService.get('${ApiEndpoints.search}?$qs');
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      if (response.success) {
+        final data = response.data;
         setState(() {
           _results = data['data'] ?? [];
           _userResults = data['users'] ?? [];
@@ -141,10 +127,7 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() => _isLoadingMore = true);
 
     try {
-      final params = <String, String>{
-        'sort': _sortBy,
-        'page': (_currentPage + 1).toString(),
-      };
+      final params = <String, String>{'sort': _sortBy, 'page': (_currentPage + 1).toString()};
       if (_searchCtrl.text.trim().isNotEmpty) {
         params['q'] = _searchCtrl.text.trim();
       }
@@ -152,17 +135,12 @@ class _SearchScreenState extends State<SearchScreen> {
         params['genre'] = _selectedGenre;
       }
 
-      final qs = params.entries
-          .map(
-            (e) =>
-                '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}',
-          )
-          .join('&');
+      final qs = params.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&');
 
       final response = await ApiService.get('${ApiEndpoints.search}?$qs');
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      if (response.success) {
+        final data = response.data;
         setState(() {
           _results.addAll(data['data'] ?? []);
           _currentPage = data['current_page'] ?? _currentPage;
@@ -190,27 +168,17 @@ class _SearchScreenState extends State<SearchScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Discover',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
+                  const Text('Discover', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   if (!_isLoading && _totalResults > 0)
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
+                        color: Colors.grey.withAlpha(25),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         '$_totalResults series',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w500),
                       ),
                     ),
                 ],
@@ -237,15 +205,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         )
                       : null,
                   filled: true,
-                  fillColor: Colors.grey[100],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
+                  fillColor: Colors.grey.withAlpha(25),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
             ),
@@ -260,9 +222,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 itemBuilder: (ctx, i) {
                   final genre = _genres[i];
                   final key = genre.toLowerCase();
-                  final isSelected =
-                      _selectedGenre == key ||
-                      (i == 0 && _selectedGenre == 'all');
+                  final isSelected = _selectedGenre == key || (i == 0 && _selectedGenre == 'all');
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: GestureDetector(
@@ -271,14 +231,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         _resetAndSearch();
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 7,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? theme.primaryColor
-                              : theme.primaryColor.withAlpha(15),
+                          color: isSelected ? theme.primaryColor : theme.primaryColor.withAlpha(15),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -286,9 +241,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: isSelected
-                                ? Colors.white
-                                : theme.primaryColor,
+                            color: isSelected ? Colors.white : theme.primaryColor,
                           ),
                         ),
                       ),
@@ -315,15 +268,11 @@ class _SearchScreenState extends State<SearchScreen> {
                           _resetAndSearch();
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: isActive
-                                ? Colors.grey[800]
-                                : Colors.grey[100],
+                            color: isActive ? theme.primaryColor : Colors.grey.withAlpha(25),
                             borderRadius: BorderRadius.circular(12),
+                            border: isActive ? null : Border.all(color: Colors.grey.withAlpha(50)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -331,9 +280,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               Icon(
                                 opt['icon'] as IconData,
                                 size: 14,
-                                color: isActive
-                                    ? Colors.white
-                                    : Colors.grey[500],
+                                color: isActive ? Colors.white : theme.textTheme.bodySmall?.color,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -341,9 +288,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: isActive
-                                      ? Colors.white
-                                      : Colors.grey[600],
+                                  color: isActive ? Colors.white : theme.textTheme.bodySmall?.color,
                                 ),
                               ),
                             ],
@@ -364,14 +309,8 @@ class _SearchScreenState extends State<SearchScreen> {
                   ? _buildEmpty()
                   : ListView.builder(
                       controller: _scrollCtrl,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 4,
-                      ),
-                      itemCount:
-                          (_userResults.isNotEmpty ? 1 : 0) +
-                          _results.length +
-                          (_isLoadingMore ? 1 : 0),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      itemCount: (_userResults.isNotEmpty ? 1 : 0) + _results.length + (_isLoadingMore ? 1 : 0),
                       itemBuilder: (ctx, i) {
                         // User results section
                         if (_userResults.isNotEmpty && i == 0) {
@@ -381,16 +320,10 @@ class _SearchScreenState extends State<SearchScreen> {
                         if (seriesIdx >= _results.length) {
                           return const Padding(
                             padding: EdgeInsets.all(16),
-                            child: Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
+                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                           );
                         }
-                        return _RankCard(
-                          rank: seriesIdx + 1,
-                          series: _results[seriesIdx],
-                          theme: theme,
-                        );
+                        return _RankCard(rank: seriesIdx + 1, series: _results[seriesIdx], theme: theme);
                       },
                     ),
             ),
@@ -408,28 +341,19 @@ class _SearchScreenState extends State<SearchScreen> {
       itemBuilder: (_, i) => Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(16),
-        ),
+        decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(16)),
         child: Row(
           children: [
             Container(
               width: 28,
               height: 28,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: Colors.grey[200], shape: BoxShape.circle),
             ),
             const SizedBox(width: 10),
             Container(
               width: 72,
               height: 100,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(12),
-              ),
+              decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -439,28 +363,19 @@ class _SearchScreenState extends State<SearchScreen> {
                   Container(
                     width: 130,
                     height: 14,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
                   ),
                   const SizedBox(height: 8),
                   Container(
                     width: 90,
                     height: 10,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
                   ),
                   const SizedBox(height: 8),
                   Container(
                     width: 60,
                     height: 10,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
                   ),
                 ],
               ),
@@ -480,17 +395,10 @@ class _SearchScreenState extends State<SearchScreen> {
           const SizedBox(height: 16),
           Text(
             'Tidak ada hasil ditemukan',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[600]),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Coba kata kunci atau genre lain',
-            style: TextStyle(fontSize: 13, color: Colors.grey[400]),
-          ),
+          Text('Coba kata kunci atau genre lain', style: TextStyle(fontSize: 13, color: Colors.grey[400])),
         ],
       ),
     );
@@ -509,11 +417,7 @@ class _SearchScreenState extends State<SearchScreen> {
               const SizedBox(width: 6),
               Text(
                 'Users',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: theme.primaryColor,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: theme.primaryColor),
               ),
             ],
           ),
@@ -531,9 +435,9 @@ class _SearchScreenState extends State<SearchScreen> {
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
             decoration: BoxDecoration(
-              color: theme.cardColor,
+              color: Colors.grey.withAlpha(25),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.withAlpha(25)),
+              border: Border.all(color: Colors.grey.withAlpha(50)),
             ),
             child: InkWell(
               borderRadius: BorderRadius.circular(14),
@@ -543,33 +447,21 @@ class _SearchScreenState extends State<SearchScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => role == 'author'
-                        ? AuthorProfileScreen(authorId: uid)
-                        : ReaderProfileScreen(userId: uid),
+                    builder: (_) =>
+                        role == 'author' ? AuthorProfileScreen(authorId: uid) : ReaderProfileScreen(userId: uid),
                   ),
                 );
               },
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Row(
                   children: [
                     // Avatar
                     CircleAvatar(
                       radius: 24,
                       backgroundColor: Colors.grey[200],
-                      backgroundImage: avatarUrl.isNotEmpty
-                          ? CachedNetworkImageProvider(avatarUrl)
-                          : null,
-                      child: avatarUrl.isEmpty
-                          ? Icon(
-                              Icons.person,
-                              size: 24,
-                              color: Colors.grey[400],
-                            )
-                          : null,
+                      backgroundImage: avatarUrl.isNotEmpty ? CachedNetworkImageProvider(avatarUrl) : null,
+                      child: avatarUrl.isEmpty ? Icon(Icons.person, size: 24, color: Colors.grey[400]) : null,
                     ),
                     const SizedBox(width: 12),
 
@@ -583,20 +475,14 @@ class _SearchScreenState extends State<SearchScreen> {
                               Flexible(
                                 child: Text(
                                   name,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (supporter != null) ...[
                                 const SizedBox(width: 4),
-                                Text(
-                                  supporter['icon']?.toString() ?? '💎',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
+                                Text(supporter['icon']?.toString() ?? '💎', style: const TextStyle(fontSize: 12)),
                               ],
                             ],
                           ),
@@ -604,38 +490,25 @@ class _SearchScreenState extends State<SearchScreen> {
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 1,
-                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                 decoration: BoxDecoration(
                                   color: role == 'author'
-                                      ? Colors.purple.withAlpha(20)
+                                      ? theme.primaryColor.withAlpha(20)
                                       : theme.primaryColor.withAlpha(15),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  role == 'author'
-                                      ? 'Author'
-                                      : 'Lv.$level Reader',
+                                  role == 'author' ? 'Author' : 'Lv.$level Reader',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
-                                    color: role == 'author'
-                                        ? Colors.purple
-                                        : theme.primaryColor,
+                                    color: role == 'author' ? theme.primaryColor : theme.primaryColor,
                                   ),
                                 ),
                               ),
                               if (handle.isNotEmpty && handle != name) ...[
                                 const SizedBox(width: 6),
-                                Text(
-                                  '@$handle',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[400],
-                                  ),
-                                ),
+                                Text('@$handle', style: TextStyle(fontSize: 11, color: Colors.grey[400])),
                               ],
                             ],
                           ),
@@ -648,18 +521,9 @@ class _SearchScreenState extends State<SearchScreen> {
                       children: [
                         Text(
                           _formatFollowers(followersCount),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                         ),
-                        Text(
-                          'followers',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[400],
-                          ),
-                        ),
+                        Text('followers', style: TextStyle(fontSize: 10, color: Colors.grey[400])),
                       ],
                     ),
                   ],
@@ -677,11 +541,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 const SizedBox(width: 6),
                 Text(
                   'Series',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: theme.primaryColor,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: theme.primaryColor),
                 ),
               ],
             ),
@@ -705,19 +565,13 @@ class _RankCard extends StatelessWidget {
   final Map<String, dynamic> series;
   final ThemeData theme;
 
-  const _RankCard({
-    required this.rank,
-    required this.series,
-    required this.theme,
-  });
+  const _RankCard({required this.rank, required this.series, required this.theme});
 
   @override
   Widget build(BuildContext context) {
     final title = series['title'] ?? 'No Title';
     final authorData = series['author'];
-    final authorName = authorData != null
-        ? (authorData['pen_name'] ?? 'Unknown')
-        : 'Unknown';
+    final authorName = authorData != null ? (authorData['pen_name'] ?? 'Unknown') : 'Unknown';
     final genre = series['genre'] ?? '';
     final episodesCount = series['episodes_count'] ?? 0;
     final totalViews = series['total_views'] ?? 0;
@@ -728,7 +582,7 @@ class _RankCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: Colors.grey.withAlpha(25),
         borderRadius: BorderRadius.circular(16),
         border: rank <= 3
             ? Border.all(color: _rankColor(rank).withAlpha(40), width: 1.5)
@@ -739,12 +593,7 @@ class _RankCard extends StatelessWidget {
         onTap: () {
           final seriesId = series['id'];
           if (seriesId != null) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => SeriesDetailScreen(seriesId: seriesId),
-              ),
-            );
+            Navigator.push(context, MaterialPageRoute(builder: (_) => SeriesDetailScreen(seriesId: seriesId)));
           }
         },
         child: Padding(
@@ -770,11 +619,7 @@ class _RankCard extends StatelessWidget {
                             if (progress == null) return child;
                             return Container(
                               color: Colors.grey[200],
-                              child: const Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
+                              child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
                             );
                           },
                           errorBuilder: (c, e, s) => _coverPlaceholder(),
@@ -791,10 +636,7 @@ class _RankCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -817,10 +659,7 @@ class _RankCard extends StatelessWidget {
                             .take(2)
                             .map<Widget>(
                               (g) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 7,
-                                  vertical: 2,
-                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: theme.primaryColor.withAlpha(15),
                                   borderRadius: BorderRadius.circular(8),
@@ -842,47 +681,17 @@ class _RankCard extends StatelessWidget {
                     // Stats
                     Row(
                       children: [
-                        Icon(
-                          Icons.visibility_outlined,
-                          size: 13,
-                          color: Colors.grey[400],
-                        ),
+                        Icon(Icons.visibility_outlined, size: 13, color: Colors.grey[400]),
                         const SizedBox(width: 3),
-                        Text(
-                          _formatCount(totalViews),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[500],
-                          ),
-                        ),
+                        Text(_formatCount(totalViews), style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                         const SizedBox(width: 10),
-                        Icon(
-                          Icons.favorite_border,
-                          size: 13,
-                          color: Colors.grey[400],
-                        ),
+                        Icon(Icons.favorite_border, size: 13, color: Colors.grey[400]),
                         const SizedBox(width: 3),
-                        Text(
-                          _formatCount(totalLikes),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[500],
-                          ),
-                        ),
+                        Text(_formatCount(totalLikes), style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                         const SizedBox(width: 10),
-                        Icon(
-                          Icons.menu_book_outlined,
-                          size: 13,
-                          color: Colors.grey[400],
-                        ),
+                        Icon(Icons.menu_book_outlined, size: 13, color: Colors.grey[400]),
                         const SizedBox(width: 3),
-                        Text(
-                          '$episodesCount ep',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[500],
-                          ),
-                        ),
+                        Text('$episodesCount ep', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                       ],
                     ),
                   ],
@@ -898,10 +707,7 @@ class _RankCard extends StatelessWidget {
   Widget _coverPlaceholder() => Container(
     width: 72,
     height: 100,
-    decoration: BoxDecoration(
-      color: Colors.grey[200],
-      borderRadius: BorderRadius.circular(12),
-    ),
+    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
     child: Icon(Icons.auto_stories, size: 24, color: Colors.grey[400]),
   );
 
@@ -943,22 +749,12 @@ class _RankBadge extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
           shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: _color.withAlpha(60),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: _color.withAlpha(60), blurRadius: 6, offset: const Offset(0, 2))],
         ),
         child: Center(
           child: Text(
             '#$rank',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              fontSize: 11,
-            ),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11),
           ),
         ),
       );
@@ -969,11 +765,7 @@ class _RankBadge extends StatelessWidget {
       child: Center(
         child: Text(
           '#$rank',
-          style: TextStyle(
-            color: Colors.grey[400],
-            fontWeight: FontWeight.w700,
-            fontSize: 12,
-          ),
+          style: TextStyle(color: Colors.grey[400], fontWeight: FontWeight.w700, fontSize: 12),
         ),
       ),
     );

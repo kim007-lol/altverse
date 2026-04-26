@@ -13,7 +13,7 @@ class RankingInfoScreen extends StatelessWidget {
         title: const Text('Ranking & Badge System'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: Colors.grey[900],
+        foregroundColor: theme.textTheme.bodyLarge?.color,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
@@ -26,7 +26,7 @@ class RankingInfoScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey[900],
+                color: theme.textTheme.bodyLarge?.color,
               ),
             ),
             const SizedBox(height: 6),
@@ -89,7 +89,7 @@ class RankingInfoScreen extends StatelessWidget {
             _buildSection(
               theme,
               icon: Icons.emoji_events_rounded,
-              color: Colors.deepPurple,
+              color: theme.primaryColor,
               title: 'Season System (90 Days)',
               children: [
                 _descText(

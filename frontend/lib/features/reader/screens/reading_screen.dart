@@ -1,9 +1,10 @@
-import 'dart:convert';
+// reading_screen.dart
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/services/api_service.dart';
 import '../widgets/comment_drawer.dart'; // the actual path we used
+import '../widgets/music_player_widget.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class ReadingScreen extends StatefulWidget {
@@ -25,9 +26,11 @@ class _ReadingScreenState extends State<ReadingScreen> {
   int _currentPage = 0;
   bool _showToolbar = true;
   bool _darkMode = false;
+  bool _showMusicPlayer = true;
 
   bool _isLoading = true;
   bool _isLocked = false;
+  bool _isOwnEpisode = false;
   Map<String, dynamic>? _episode;
   List<dynamic> _pages = [];
 
@@ -57,11 +60,12 @@ class _ReadingScreenState extends State<ReadingScreen> {
       final res = await ApiService.get(
         ApiEndpoints.readEpisode(widget.seriesId, widget.episodeId),
       );
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
+      if (res.success) {
+        final data = res.data;
         if (mounted) {
           setState(() {
             _isLocked = data['locked'] ?? false;
+            _isOwnEpisode = data['is_own_episode'] ?? false;
             _episode = data['episode'];
             _isEpisodeLiked = data['is_liked'] ?? false;
             _episodeLikeCount = data['like_count'] ?? 0;
@@ -91,7 +95,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
     try {
       await ApiService.post(
         ApiEndpoints.updateProgress(widget.seriesId, widget.episodeId),
-        {'last_page': pageIndex + 1, 'progress': progress},
+        body: {'last_page': pageIndex + 1, 'progress': progress},
       );
     } catch (_) {}
   }
@@ -128,9 +132,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
     try {
       final res = await ApiService.post(
         ApiEndpoints.episodeUnlock(widget.episodeId),
-        {},
+        body: {},
       );
-      if (res.statusCode == 200) {
+      if (res.success) {
         // Success, reload
         setState(() {
           _isLoading = true;
@@ -141,7 +145,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(jsonDecode(res.body)['message'] ?? 'Unlock failed'),
+              content: Text(res.message),
             ),
           );
         }
@@ -166,10 +170,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
     try {
       final res = await ApiService.post(
         ApiEndpoints.episodeLikeToggle(widget.seriesId, widget.episodeId),
-        {},
+        body: {},
       );
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
+      if (res.success) {
+        final data = res.data;
         if (mounted) {
           setState(() {
             _isEpisodeLiked = data['liked'] ?? _isEpisodeLiked;
@@ -352,6 +356,22 @@ class _ReadingScreenState extends State<ReadingScreen> {
                   child: const Icon(Icons.comment, color: Colors.white),
                 ),
               ),
+
+              // ─── Music Player ───
+              if (_showMusicPlayer &&
+                  _episode != null &&
+                  _episode!['music_path'] != null &&
+                  (_episode!['music_path'] as String).isNotEmpty)
+                Positioned(
+                  top: _showToolbar ? 64 : 8,
+                  left: 0,
+                  right: 0,
+                  child: MusicPlayerWidget(
+                    musicUrl: ApiService.getImageUrl(_episode!['music_path']),
+                    musicTitle: _episode!['music_title'] ?? 'Background Music',
+                    onClose: () => setState(() => _showMusicPlayer = false),
+                  ),
+                ),
             ],
           ),
         ),
@@ -393,6 +413,45 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   Widget _buildPaywallPage(ThemeData theme) {
     final coinsRequired = _episode!['coin_price'] ?? 0;
+
+    // Author viewing own locked episode
+    if (_isOwnEpisode) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock_outline, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              const Text(
+                'Episode Premium Kamu',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Ini adalah episode premium milikmu sendiri (harga: $coinsRequired Coins).\n\nKamu tidak bisa membeli episode sendiri. Gunakan akun Reader lain untuk mengujinya.',
+                style: TextStyle(color: Colors.grey[600], height: 1.5),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[300],
+                  foregroundColor: Colors.grey[700],
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Kembali', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Normal reader paywall
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),

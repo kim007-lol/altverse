@@ -44,6 +44,8 @@ class ReadingController extends Controller
 
         // ── Paywall check ──
         if ($episode->is_premium && !$user->hasEpisodeAccess($episode)) {
+            $isOwnEpisode = (int) $series->author_id === (int) $user->id;
+
             $previewPages = $episode->pages()
                 ->orderBy('page_order')
                 ->take(2)
@@ -51,6 +53,7 @@ class ReadingController extends Controller
 
             return response()->json([
                 'locked'          => true,
+                'is_own_episode'  => $isOwnEpisode,
                 'episode'         => [
                     'id'             => $episode->id,
                     'title'          => $episode->title,
@@ -123,7 +126,16 @@ class ReadingController extends Controller
 
         return response()->json([
             'locked'       => false,
-            'episode'      => $episode,
+            'episode'      => [
+                'id'             => $episode->id,
+                'title'          => $episode->title,
+                'episode_number' => $episode->episode_number,
+                'is_premium'     => $episode->is_premium,
+                'coin_price'     => $episode->coin_price,
+                'music_path'     => $episode->music_path,
+                'music_title'    => $episode->music_title,
+                'pages'          => $episode->pages,
+            ],
             'is_liked'     => $isLiked,
             'like_count'   => $likeCount,
             'prev_episode' => $prevEp,
@@ -132,12 +144,7 @@ class ReadingController extends Controller
     }
 
     /**
-     * Update reading progress — awards XP ONCE when episode is completed.
-     *
-     * Security:
-     * - XP only awarded if progress >= 100% AND this episode has NOT been claimed before
-     * - Uses `episode_xp_claims` table to prevent repeat farming
-     * - Also subject to daily cap (30 XP/day for reading_complete)
+     * Update reading progress — tracks mission progress when episode completed.
      */
     public function updateProgress(Request $request, Series $series, Episode $episode): JsonResponse
     {
@@ -161,15 +168,21 @@ class ReadingController extends Controller
             ]
         );
 
-        // Automatic XP claim if progress >= 100
-        $xpAwarded = false;
+        // Track mission progress if episode completed
         if ($validated['progress'] >= 100) {
-            $xpAwarded = app(\App\Services\MissionService::class)->autoClaimMission($user, 'read_episode');
+            // Award XP for reading completion
+            XpService::award($user->id, 'reading_complete');
+
+            // Track mission progress
+            $missionService = app(\App\Services\MissionService::class);
+            $missionService->autoTrack($user, 'read_episode');
+
+            // Check reading badges
+            \App\Services\BadgeService::checkReadingBadges($user);
         }
 
         return response()->json([
-            'message'    => 'Progress tersimpan',
-            'xp_awarded' => $xpAwarded,
+            'message' => 'Progress tersimpan',
         ]);
     }
 
@@ -179,7 +192,7 @@ class ReadingController extends Controller
         $user = $request->user();
 
         $series->load([
-            'author:id,name,pen_name,avatar_url,bio,author_tier,followers_count',
+            'author:id,name,pen_name,avatar_url,author_avatar_url,bio,author_tier,followers_count',
             'episodes' => fn($q) => $q
                 ->where('status', 'published')
                 ->orderBy('episode_number')
@@ -191,6 +204,18 @@ class ReadingController extends Controller
         $seriesData['is_liked'] = $user->likes()->where('series_id', $series->id)->exists();
         $seriesData['is_bookmarked'] = $user->bookmarks()->where('series_id', $series->id)->exists();
         $seriesData['is_following'] = $user->following()->where('following_id', $series->author_id)->exists();
+        $seriesData['user_coins'] = $user->coins;
+
+        // Add per-episode unlock status
+        $unlockedIds = $user->unlockedEpisodes()
+            ->whereIn('episode_id', collect($seriesData['episodes'])->pluck('id'))
+            ->pluck('episode_id')
+            ->toArray();
+
+        foreach ($seriesData['episodes'] as &$ep) {
+            $ep['is_unlocked'] = in_array($ep['id'], $unlockedIds);
+        }
+        unset($ep);
 
         return response()->json(['series' => $seriesData]);
     }
@@ -259,6 +284,11 @@ class ReadingController extends Controller
             }
 
             $lockedEpisode->increment('like_count');
+
+            // Track mission progress for like
+            $missionService = app(\App\Services\MissionService::class);
+            $missionService->autoTrack($user, 'like_episode');
+
             return ['liked' => true, 'like_count' => $lockedEpisode->fresh()->like_count];
         });
 

@@ -1,9 +1,11 @@
-import 'dart:convert';
+// series_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:provider/provider.dart';
 import 'author_profile_screen.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/auth_provider.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../widgets/comment_drawer.dart';
 import 'reading_screen.dart';
@@ -35,11 +37,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
   Future<void> _fetchSeries() async {
     try {
-      final res = await ApiService.get(
-        ApiEndpoints.seriesDetail(widget.seriesId),
-      );
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body)['series'];
+      final res = await ApiService.get(ApiEndpoints.seriesDetail(widget.seriesId));
+      if (res.success) {
+        final data = res.data['series'];
         if (mounted) {
           setState(() {
             _series = data;
@@ -75,22 +75,16 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final oldCount = _series!['total_likes'] ?? 0;
     setState(() {
       _isLiked = !wasLiked;
-      _series!['total_likes'] = wasLiked
-          ? (oldCount > 0 ? oldCount - 1 : 0)
-          : oldCount + 1;
+      _series!['total_likes'] = wasLiked ? (oldCount > 0 ? oldCount - 1 : 0) : oldCount + 1;
     });
     try {
-      final res = await ApiService.post(
-        ApiEndpoints.likeToggle(widget.seriesId),
-        {},
-      );
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
+      final res = await ApiService.post(ApiEndpoints.likeToggle(widget.seriesId), body: {});
+      if (res.success) {
+        final data = res.data;
         if (mounted) {
           setState(() {
             _isLiked = data['liked'] ?? _isLiked;
-            _series!['total_likes'] =
-                data['total_likes'] ?? _series!['total_likes'];
+            _series!['total_likes'] = data['total_likes'] ?? _series!['total_likes'];
           });
         }
       } else {
@@ -117,39 +111,28 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final was = _isBookmarked;
     setState(() => _isBookmarked = !was);
     try {
-      final res = await ApiService.post(
-        ApiEndpoints.bookmarkToggle(widget.seriesId),
-        {},
-      );
-      if (res.statusCode == 200 && mounted) {
-        final data = jsonDecode(res.body);
+      final res = await ApiService.post(ApiEndpoints.bookmarkToggle(widget.seriesId), body: {});
+      if (res.success && mounted) {
+        final data = res.data;
         setState(() => _isBookmarked = data['bookmarked'] ?? !was);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              _isBookmarked ? 'Bookmark ditambahkan' : 'Bookmark dihapus',
-            ),
+            content: Text(_isBookmarked ? 'Bookmark ditambahkan' : 'Bookmark dihapus'),
             duration: const Duration(seconds: 1),
           ),
         );
       } else if (mounted) {
         setState(() => _isBookmarked = was);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal mengubah bookmark'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Gagal mengubah bookmark'), backgroundColor: Colors.red));
       }
     } catch (_) {
       if (mounted) {
         setState(() => _isBookmarked = was);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error: gagal mengubah bookmark'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Error: gagal mengubah bookmark'), backgroundColor: Colors.red));
       }
     }
   }
@@ -162,12 +145,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final was = _isFollowing;
     setState(() => _isFollowing = !was);
     try {
-      final res = await ApiService.post(
-        ApiEndpoints.followToggle(authorId),
-        {},
-      );
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
+      final res = await ApiService.post(ApiEndpoints.followToggle(authorId), body: {});
+      if (res.success) {
+        final data = res.data;
         if (mounted) {
           setState(() => _isFollowing = data['following'] ?? _isFollowing);
         }
@@ -183,10 +163,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   void _showSupportDialog() {
     if (_series == null) return;
     final authorId = _series!['author']?['id'];
-    final authorName =
-        _series!['author']?['pen_name'] ??
-        _series!['author']?['name'] ??
-        'Author';
+    final authorName = _series!['author']?['pen_name'] ?? _series!['author']?['name'] ?? 'Author';
     if (authorId == null) return;
 
     final amountController = TextEditingController(text: '10');
@@ -212,13 +189,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: InputDecoration(
                 labelText: 'Jumlah Coins',
-                prefixIcon: const Icon(
-                  Icons.monetization_on,
-                  color: Colors.amber,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                prefixIcon: const Icon(Icons.monetization_on, color: Colors.amber),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
             const SizedBox(height: 8),
@@ -227,11 +199,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
               children: [5, 10, 25, 50, 100].map((amt) {
                 return ActionChip(
                   label: Text('$amt'),
-                  avatar: const Icon(
-                    Icons.monetization_on,
-                    size: 16,
-                    color: Colors.amber,
-                  ),
+                  avatar: const Icon(Icons.monetization_on, size: 16, color: Colors.amber),
                   onPressed: () => amountController.text = '$amt',
                 );
               }).toList(),
@@ -239,10 +207,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           FilledButton.icon(
             onPressed: () async {
               final amount = int.tryParse(amountController.text) ?? 0;
@@ -260,26 +225,217 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
   Future<void> _sendTip(int authorId, int amount) async {
     try {
-      final res = await ApiService.post(ApiEndpoints.tip, {
-        'recipient_id': authorId,
-        'amount': amount,
-      });
+      final res = await ApiService.post(ApiEndpoints.tip, body: {'author_id': authorId, 'amount': amount});
       if (mounted) {
-        final msg = res.statusCode == 200
-            ? jsonDecode(res.body)['message'] ?? 'Tip berhasil dikirim! 🎉'
-            : jsonDecode(res.body)['message'] ?? 'Gagal mengirim tip';
+        final msg = res.success
+            ? (res.data is Map ? res.data['message'] ?? 'Tip berhasil dikirim! 🎉' : 'Tip berhasil dikirim! 🎉')
+            : res.message;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: res.success ? Colors.green : Colors.red));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Error mengirim tip'), backgroundColor: Colors.red));
+      }
+    }
+  }
+
+  // ─── Episode Tap Handler ───
+  void _onEpisodeTap(Map<String, dynamic> ep, bool isLocked, bool isOwnSeries, int coinPrice) {
+    if (isOwnSeries && ep['is_premium'] == true) {
+      // Author tapping own premium episode — navigate directly (they have free access via ReadingScreen)
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ReadingScreen(seriesId: widget.seriesId, episodeId: ep['id']),
+        ),
+      );
+      return;
+    }
+
+    if (!isLocked) {
+      // Free or already unlocked — navigate directly
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ReadingScreen(seriesId: widget.seriesId, episodeId: ep['id']),
+        ),
+      );
+      return;
+    }
+
+    // Locked — show unlock dialog
+    final userCoins = _series?['user_coins'] ?? 0;
+    final hasEnough = userCoins >= coinPrice;
+    final episodeTitle = ep['title'] ?? 'Episode ${ep['episode_number']}';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.lock, color: Colors.orange[400]),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('Episode Premium', style: TextStyle(fontSize: 18)),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.withAlpha(15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.orange.withAlpha(40)),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    episodeTitle,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.monetization_on, size: 28, color: Colors.amber),
+                      const SizedBox(width: 6),
+                      Text(
+                        '$coinPrice Coins',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.account_balance_wallet, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  'Saldo kamu: $userCoins Coins',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: hasEnough ? Colors.grey[600] : Colors.red,
+                    fontWeight: hasEnough ? FontWeight.normal : FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            if (!hasEnough) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Koin tidak cukup! Silakan top-up terlebih dahulu.',
+                style: TextStyle(fontSize: 12, color: Colors.red[400]),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          FilledButton.icon(
+            onPressed: hasEnough
+                ? () {
+                    Navigator.pop(ctx);
+                    _performUnlock(ep['id'], coinPrice);
+                  }
+                : null,
+            icon: const Icon(Icons.lock_open, size: 18),
+            label: Text(hasEnough ? 'Unlock & Baca' : 'Koin Tidak Cukup'),
+            style: FilledButton.styleFrom(
+              backgroundColor: hasEnough ? Colors.orange : Colors.grey[300],
+              foregroundColor: hasEnough ? Colors.white : Colors.grey[600],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performUnlock(int episodeId, int coinPrice) async {
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final res = await ApiService.post(
+        ApiEndpoints.episodeUnlock(episodeId),
+        body: {},
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context); // close loading
+
+      if (res.success) {
+        // Update local user_coins
+        setState(() {
+          _series?['user_coins'] = (_series?['user_coins'] ?? 0) - coinPrice;
+          // Mark episode as unlocked in local state
+          final episodes = _series?['episodes'] as List? ?? [];
+          for (var ep in episodes) {
+            if (ep['id'] == episodeId) {
+              ep['is_unlocked'] = true;
+              break;
+            }
+          }
+        });
+
+        // Refresh AuthProvider coins
+        if (mounted) {
+          context.read<AuthProvider>().refreshProfile();
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(msg),
-            backgroundColor: res.statusCode == 200 ? Colors.green : Colors.red,
+            content: Text(res.data['message'] ?? 'Episode berhasil di-unlock! 🎉'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigate to reading screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ReadingScreen(seriesId: widget.seriesId, episodeId: episodeId),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res.message),
+            backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        Navigator.pop(context); // close loading
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Error mengirim tip'),
+            content: Text('Gagal unlock episode. Coba lagi.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -292,10 +448,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final title = _series!['title'] ?? 'Series';
     final slug = _series!['slug'] ?? '';
     // ignore: deprecated_member_use
-    Share.share(
-      'Check out "$title" on AU Reader!\nhttps://aureader.com/series/$slug',
-      subject: title,
-    );
+    Share.share('Check out "$title" on AU Reader!\nhttps://aureader.com/series/$slug', subject: title);
   }
 
   // ─── Helpers ───
@@ -349,8 +502,11 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final synopsis = _series!['synopsis'] ?? 'No synopsis available.';
     final genre = _series!['genre'] ?? '';
     final ageRating = _series!['age_rating'] ?? '';
-    final followersCount =
-        _series!['followers_count'] ?? author['followers_count'] ?? 0;
+    final followersCount = _series!['followers_count'] ?? author['followers_count'] ?? 0;
+
+    // Check if current user is the author of this series
+    final currentUserId = context.watch<AuthProvider>().user?['id'];
+    final isOwnSeries = currentUserId != null && author['id'] == currentUserId;
 
     return Scaffold(
       body: CustomScrollView(
@@ -381,24 +537,15 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                   coverUrl.isEmpty
                       ? Container(
                           color: theme.primaryColor.withAlpha(40),
-                          child: const Icon(
-                            Icons.auto_stories,
-                            size: 64,
-                            color: Colors.white38,
-                          ),
+                          child: const Icon(Icons.auto_stories, size: 64, color: Colors.white38),
                         )
                       : CachedNetworkImage(
                           imageUrl: coverUrl,
                           fit: BoxFit.cover,
-                          placeholder: (ctx1, url1) =>
-                              Container(color: Colors.grey[300]),
+                          placeholder: (ctx1, url1) => Container(color: Colors.grey[300]),
                           errorWidget: (ctx2, url2, err) => Container(
                             color: theme.primaryColor.withAlpha(40),
-                            child: const Icon(
-                              Icons.auto_stories,
-                              size: 64,
-                              color: Colors.white38,
-                            ),
+                            child: const Icon(Icons.auto_stories, size: 64, color: Colors.white38),
                           ),
                         ),
                   // Gradient overlay
@@ -407,10 +554,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withAlpha(30),
-                          Colors.black.withAlpha(180),
-                        ],
+                        colors: [Colors.black.withAlpha(30), Colors.black.withAlpha(180)],
                       ),
                     ),
                   ),
@@ -419,9 +563,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
             ),
             actions: [
               IconButton(
-                icon: Icon(
-                  _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                ),
+                icon: Icon(_isBookmarked ? Icons.bookmark : Icons.bookmark_border),
                 onPressed: _toggleBookmark,
                 tooltip: 'Bookmark',
               ),
@@ -430,25 +572,19 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                 onSelected: (val) {
                   if (val == 'share') _shareSeries();
                   if (val == 'report') {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Report sent. Thank you!')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('Report sent. Thank you!')));
                   }
                 },
                 itemBuilder: (_) => [
                   const PopupMenuItem(
                     value: 'share',
-                    child: ListTile(
-                      leading: Icon(Icons.share),
-                      title: Text('Share'),
-                    ),
+                    child: ListTile(leading: Icon(Icons.share), title: Text('Share')),
                   ),
                   const PopupMenuItem(
                     value: 'report',
-                    child: ListTile(
-                      leading: Icon(Icons.flag_outlined),
-                      title: Text('Report'),
-                    ),
+                    child: ListTile(leading: Icon(Icons.flag_outlined), title: Text('Report')),
                   ),
                 ],
               ),
@@ -473,21 +609,14 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                           if (authorId != null) {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    AuthorProfileScreen(authorId: authorId),
-                              ),
+                              MaterialPageRoute(builder: (_) => AuthorProfileScreen(authorId: authorId)),
                             );
                           }
                         },
                         child: CircleAvatar(
                           radius: 22,
-                          backgroundImage: authorAvatar != null
-                              ? CachedNetworkImageProvider(authorAvatar)
-                              : null,
-                          child: authorAvatar == null
-                              ? const Icon(Icons.person, size: 22)
-                              : null,
+                          backgroundImage: authorAvatar != null ? CachedNetworkImageProvider(authorAvatar) : null,
+                          child: authorAvatar == null ? const Icon(Icons.person, size: 22) : null,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -495,45 +624,22 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              authorName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            Text(
-                              '$followersCount followers',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[500],
-                              ),
-                            ),
+                            Text(authorName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            Text('$followersCount followers', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                           ],
                         ),
                       ),
-                      // Follow Button
-                      FilledButton.icon(
+                      // Follow Button (hide if own series)
+                      if (!isOwnSeries)
+                        FilledButton.icon(
                         onPressed: _toggleFollow,
-                        icon: Icon(
-                          _isFollowing ? Icons.check : Icons.person_add_alt_1,
-                          size: 16,
-                        ),
+                        icon: Icon(_isFollowing ? Icons.check : Icons.person_add_alt_1, size: 16),
                         label: Text(_isFollowing ? 'Following' : 'Follow'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: _isFollowing
-                              ? Colors.grey[300]
-                              : theme.primaryColor,
-                          foregroundColor: _isFollowing
-                              ? Colors.grey[700]
-                              : Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
+                          backgroundColor: _isFollowing ? Colors.grey[300] : theme.primaryColor,
+                          foregroundColor: _isFollowing ? Colors.grey[700] : theme.colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
                       ),
                     ],
@@ -546,24 +652,24 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                       // Like Button
                       Expanded(
                         child: _ActionButton(
-                          icon: _isLiked
-                              ? Icons.favorite
-                              : Icons.favorite_border,
+                          icon: _isLiked ? Icons.favorite : Icons.favorite_border,
                           label: _formatCount(_series!['total_likes'] ?? 0),
                           color: _isLiked ? Colors.red : Colors.grey[700]!,
                           onTap: _toggleLike,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      // Support / Donate Button
-                      Expanded(
-                        child: _ActionButton(
-                          icon: Icons.volunteer_activism,
-                          label: 'Support',
-                          color: Colors.pink[400]!,
-                          onTap: _showSupportDialog,
+                      // Support / Donate Button (hide if own series)
+                      if (!isOwnSeries) ...[
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _ActionButton(
+                            icon: Icons.volunteer_activism,
+                            label: 'Support',
+                            color: Colors.pink[400]!,
+                            onTap: _showSupportDialog,
+                          ),
                         ),
-                      ),
+                      ],
                       const SizedBox(width: 8),
                       // Share Button
                       Expanded(
@@ -580,12 +686,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
                   // ─── Stats Row: views • episodes • last updated ───
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 8,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                      color: Colors.grey.withAlpha(25),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -596,21 +699,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                           value: _formatCount(_series!['total_views'] ?? 0),
                           label: 'Views',
                         ),
-                        Container(
-                          width: 1,
-                          height: 30,
-                          color: Colors.grey[300],
-                        ),
-                        _StatChip(
-                          icon: Icons.list_alt,
-                          value: '${episodes.length}',
-                          label: 'Episodes',
-                        ),
-                        Container(
-                          width: 1,
-                          height: 30,
-                          color: Colors.grey[300],
-                        ),
+                        Container(width: 1, height: 30, color: Colors.grey[300]),
+                        _StatChip(icon: Icons.list_alt, value: '${episodes.length}', label: 'Episodes'),
+                        Container(width: 1, height: 30, color: Colors.grey[300]),
                         _StatChip(
                           icon: Icons.favorite,
                           value: _formatCount(_series!['total_likes'] ?? 0),
@@ -622,14 +713,10 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                   const SizedBox(height: 16),
 
                   // ─── Synopsis (expandable) ───
-                  const Text(
-                    'Synopsis',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                  const Text('Synopsis', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   GestureDetector(
-                    onTap: () =>
-                        setState(() => _synopsisExpanded = !_synopsisExpanded),
+                    onTap: () => setState(() => _synopsisExpanded = !_synopsisExpanded),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -637,22 +724,14 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                           synopsis,
                           maxLines: _synopsisExpanded ? 100 : 3,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                            height: 1.5,
-                          ),
+                          style: TextStyle(fontSize: 14, color: Colors.grey[700], height: 1.5),
                         ),
                         if (synopsis.length > 100)
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
                               _synopsisExpanded ? 'Show less' : 'Read more...',
-                              style: TextStyle(
-                                color: theme.primaryColor,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
+                              style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.w600, fontSize: 13),
                             ),
                           ),
                       ],
@@ -670,28 +749,18 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                             .split(',')
                             .map(
                               (g) => Chip(
-                                label: Text(
-                                  g.trim(),
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                backgroundColor: theme.primaryColor.withAlpha(
-                                  25,
-                                ),
+                                label: Text(g.trim(), style: const TextStyle(fontSize: 12)),
+                                backgroundColor: theme.primaryColor.withAlpha(25),
                                 padding: EdgeInsets.zero,
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                             ),
                       if (ageRating.isNotEmpty)
                         Chip(
-                          label: Text(
-                            ageRating,
-                            style: const TextStyle(fontSize: 12),
-                          ),
+                          label: Text(ageRating, style: const TextStyle(fontSize: 12)),
                           backgroundColor: Colors.orange.withAlpha(30),
                           padding: EdgeInsets.zero,
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                     ],
                   ),
@@ -703,10 +772,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                     children: [
                       Text(
                         'Episodes (${episodes.length})',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -726,19 +792,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                       padding: const EdgeInsets.all(40),
                       child: Column(
                         children: [
-                          Icon(
-                            Icons.inbox_outlined,
-                            size: 48,
-                            color: Colors.grey[300],
-                          ),
+                          Icon(Icons.inbox_outlined, size: 48, color: Colors.grey[300]),
                           const SizedBox(height: 12),
-                          Text(
-                            'Belum ada episode',
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 14,
-                            ),
-                          ),
+                          Text('Belum ada episode', style: TextStyle(color: Colors.grey[500], fontSize: 14)),
                         ],
                       ),
                     ),
@@ -748,35 +804,22 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final ep = episodes[index];
                     final bool isPremium = ep['is_premium'] == true;
+                    final bool isUnlocked = ep['is_unlocked'] == true;
+                    final bool isLocked = isPremium && !isUnlocked && !isOwnSeries;
+                    final int coinPrice = ep['coin_price'] ?? 0;
 
                     return Container(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
-                        color: theme.cardColor,
+                        color: Colors.grey.withAlpha(25),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.withAlpha(30)),
+                        border: Border.all(color: isLocked ? Colors.orange.withAlpha(60) : Colors.grey.withAlpha(50)),
                       ),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ReadingScreen(
-                                seriesId: widget.seriesId,
-                                episodeId: ep['id'],
-                              ),
-                            ),
-                          );
-                        },
+                        onTap: () => _onEpisodeTap(ep, isLocked, isOwnSeries, coinPrice),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           child: Row(
                             children: [
                               // Episode number badge
@@ -784,18 +827,22 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                                 width: 36,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: theme.primaryColor.withAlpha(20),
+                                  color: isLocked
+                                      ? Colors.orange.withAlpha(20)
+                                      : theme.primaryColor.withAlpha(20),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Center(
-                                  child: Text(
-                                    '${ep['episode_number'] ?? index + 1}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.primaryColor,
-                                      fontSize: 14,
-                                    ),
-                                  ),
+                                  child: isLocked
+                                      ? Icon(Icons.lock, size: 18, color: Colors.orange[400])
+                                      : Text(
+                                          '${ep['episode_number'] ?? index + 1}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.primaryColor,
+                                            fontSize: 14,
+                                          ),
+                                        ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -805,53 +852,63 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      ep['title'] ??
-                                          'Episode ${ep['episode_number']}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
+                                      ep['title'] ?? 'Episode ${ep['episode_number']}',
+                                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     if (ep['created_at'] != null)
                                       Text(
                                         _formatDate(ep['created_at']),
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey[500],
-                                        ),
+                                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                                       ),
                                   ],
                                 ),
                               ),
-                              // Comment icon
-                              IconButton(
-                                icon: Icon(
-                                  Icons.comment_outlined,
-                                  size: 18,
-                                  color: Colors.grey[500],
+                              // Coin price badge for locked episodes
+                              if (isLocked) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withAlpha(25),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.orange.withAlpha(60)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.monetization_on, size: 14, color: Colors.amber),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        '$coinPrice',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.orange[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                onPressed: () =>
-                                    CommentDrawer.show(context, ep['id']),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                tooltip: 'Comments',
-                              ),
+                                const SizedBox(width: 4),
+                              ],
+                              // Comment icon
+                              if (!isLocked)
+                                IconButton(
+                                  icon: Icon(Icons.comment_outlined, size: 18, color: Colors.grey[500]),
+                                  onPressed: () => CommentDrawer.show(context, ep['id']),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  tooltip: 'Comments',
+                                ),
                               const SizedBox(width: 4),
                               // Lock or chevron
-                              if (isPremium)
-                                Icon(
-                                  Icons.lock,
-                                  size: 16,
-                                  color: Colors.orange[400],
-                                )
-                              else
-                                Icon(
-                                  Icons.chevron_right,
-                                  size: 20,
-                                  color: Colors.grey[400],
-                                ),
+                              if (isPremium && isOwnSeries)
+                                Icon(Icons.lock_open, size: 16, color: Colors.green[400])
+                              else if (isPremium && isUnlocked)
+                                Icon(Icons.check_circle, size: 16, color: Colors.green[400])
+                              else if (!isPremium)
+                                Icon(Icons.chevron_right, size: 20, color: Colors.grey[400]),
                             ],
                           ),
                         ),
@@ -869,20 +926,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   String _formatDate(String dateStr) {
     try {
       final date = DateTime.parse(dateStr);
-      final months = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       return '${date.day} ${months[date.month - 1]} ${date.year}';
     } catch (_) {
       return '';
@@ -897,12 +941,7 @@ class _ActionButton extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
+  const _ActionButton({required this.icon, required this.label, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -922,11 +961,7 @@ class _ActionButton extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color),
             ),
           ],
         ),
@@ -941,11 +976,7 @@ class _StatChip extends StatelessWidget {
   final String value;
   final String label;
 
-  const _StatChip({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
+  const _StatChip({required this.icon, required this.value, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -953,10 +984,7 @@ class _StatChip extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: Colors.grey[500]),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-        ),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
         const SizedBox(height: 2),
         Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
       ],

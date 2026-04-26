@@ -1,4 +1,4 @@
-import 'dart:convert';
+// analytics_screen.dart
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
@@ -48,20 +48,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       final topEpisodesResp = results[3];
 
       setState(() {
-        if (overviewResp.statusCode == 200) {
-          _overview = jsonDecode(overviewResp.body) ?? {};
+        if (overviewResp.success) {
+          _overview = overviewResp.data is Map<String, dynamic> ? overviewResp.data : {};
         }
-        if (trendResp.statusCode == 200) {
-          final trendData = jsonDecode(trendResp.body) ?? {};
+        if (trendResp.success) {
+          final trendData = trendResp.data ?? {};
           _trendViews = List<int>.from(
             (trendData['views'] ?? []).map((v) => (v as num).toInt()),
           );
         }
-        if (topSeriesResp.statusCode == 200) {
-          _topSeries = jsonDecode(topSeriesResp.body) ?? [];
+        if (topSeriesResp.success) {
+          _topSeries = topSeriesResp.data is List ? topSeriesResp.data : [];
         }
-        if (topEpisodesResp.statusCode == 200) {
-          _topEpisodes = jsonDecode(topEpisodesResp.body) ?? [];
+        if (topEpisodesResp.success) {
+          _topEpisodes = topEpisodesResp.data is List ? topEpisodesResp.data : [];
         }
         _isLoading = false;
       });
@@ -75,10 +75,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     _fetchAll();
   }
 
-  String _formatNumber(num n) {
+  String _formatNumber(dynamic val) {
+    num n = 0;
+    if (val is num) {
+      n = val;
+    } else if (val is String) {
+      n = num.tryParse(val) ?? 0;
+    }
+    
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return n.toString();
+  }
+
+  int _parseInt(dynamic val) {
+    if (val is int) return val;
+    if (val is num) return val.toInt();
+    if (val is String) return int.tryParse(val) ?? 0;
+    return 0;
   }
 
   @override
@@ -116,7 +130,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey[900],
+                      color: theme.textTheme.bodyLarge?.color,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -146,7 +160,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 label: 'Followers',
                 value: _formatNumber(_overview['followers'] ?? 0),
                 icon: Icons.people_outline,
-                color: Colors.purple,
+                color: theme.primaryColor,
                 theme: theme,
               ),
             ],
@@ -192,6 +206,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       painter: _TrendChartPainter(
                         values: _trendViews,
                         color: theme.primaryColor,
+                        bgColor: theme.cardColor,
                       ),
                     ),
             ),
@@ -206,7 +221,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ),
           const SizedBox(height: 10),
           if (_topSeries.isEmpty)
-            _emptySection('Belum ada data series')
+            _emptySection('Belum ada data series', theme)
           else
             ..._topSeries.asMap().entries.map((entry) {
               final idx = entry.key;
@@ -215,7 +230,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 rank: idx + 1,
                 title: s['title'] ?? '',
                 views: _formatNumber(s['total_views'] ?? 0),
-                episodes: s['episodes_count'] ?? 0,
+                episodes: _parseInt(s['episodes_count']),
                 coverUrl: s['cover_url'],
                 theme: theme,
               );
@@ -230,7 +245,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ),
           const SizedBox(height: 10),
           if (_topEpisodes.isEmpty)
-            _emptySection('Belum ada data episode')
+            _emptySection('Belum ada data episode', theme)
           else
             ..._topEpisodes.asMap().entries.map((entry) {
               final idx = entry.key;
@@ -239,7 +254,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 rank: idx + 1,
                 episodeTitle: ep['episode_title'] ?? '',
                 seriesTitle: ep['series_title'] ?? '',
-                episodeNumber: ep['episode_number'] ?? 0,
+                episodeNumber: _parseInt(ep['episode_number']),
                 viewCount: _formatNumber(ep['view_count'] ?? 0),
                 theme: theme,
               );
@@ -258,7 +273,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -279,7 +294,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: isActive ? Colors.white : Colors.grey[600],
+                  color: isActive ? theme.colorScheme.onPrimary : theme.textTheme.bodySmall?.color,
                 ),
               ),
             ),
@@ -408,7 +423,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(180),
+                color: theme.scaffoldBackgroundColor.withAlpha(200),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Column(
@@ -477,8 +492,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         );
       } else {
         // Numeric requirement
-        final reqNum = (reqValue as num).toDouble();
-        final curNum = (curValue as num?)?.toDouble() ?? 0;
+        double _parseDouble(dynamic val) {
+          if (val is num) return val.toDouble();
+          if (val is String) return double.tryParse(val) ?? 0.0;
+          return 0.0;
+        }
+
+        final reqNum = _parseDouble(reqValue);
+        final curNum = _parseDouble(curValue);
         final progress = (curNum / reqNum).clamp(0.0, 1.0);
 
         widgets.add(
@@ -546,23 +567,23 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _emptySection(String text) {
+  Widget _emptySection(String text, ThemeData theme) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
-          Icon(Icons.bar_chart_rounded, size: 40, color: Colors.grey[300]),
+          Icon(Icons.bar_chart_rounded, size: 40, color: Colors.grey[500]),
           const SizedBox(height: 8),
-          Text(text, style: TextStyle(fontSize: 13, color: Colors.grey[400])),
+          Text(text, style: TextStyle(fontSize: 13, color: Colors.grey[500])),
           const SizedBox(height: 4),
           Text(
             'Start publishing to see analytics 📊',
-            style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
           ),
         ],
       ),
@@ -941,8 +962,9 @@ class _TopEpisodeCard extends StatelessWidget {
 class _TrendChartPainter extends CustomPainter {
   final List<int> values;
   final Color color;
+  final Color bgColor;
 
-  _TrendChartPainter({required this.values, required this.color});
+  _TrendChartPainter({required this.values, required this.color, required this.bgColor});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1010,7 +1032,7 @@ class _TrendChartPainter extends CustomPainter {
 
     // Dots
     final dotPaint = Paint()..color = color;
-    final whitePaint = Paint()..color = Colors.white;
+    final whitePaint = Paint()..color = bgColor;
     for (final p in points) {
       canvas.drawCircle(p, 5, whitePaint);
       canvas.drawCircle(p, 3.5, dotPaint);

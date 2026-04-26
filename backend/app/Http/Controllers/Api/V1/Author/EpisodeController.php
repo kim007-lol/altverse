@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Author;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreEpisodeRequest;
+use App\Http\Requests\UpdateEpisodeRequest;
 use App\Models\Episode;
 use App\Models\Series;
 use Illuminate\Http\Request;
@@ -39,15 +41,11 @@ class EpisodeController extends Controller
     }
 
     /** Create new episode (draft) */
-    public function store(Request $request, Series $series)
+    public function store(StoreEpisodeRequest $request, Series $series)
     {
         abort_if($series->author_id !== $request->user()->id, 403);
 
-        $validated = $request->validate([
-            'title'      => 'sometimes|string|max:255',
-            'is_premium' => 'sometimes|boolean',
-            'coin_price' => 'sometimes|integer|min:0|max:10000',
-        ]);
+        $validated = $request->validated();
 
         $lastNumber = $series->episodes()->max('episode_number') ?? 0;
 
@@ -68,17 +66,12 @@ class EpisodeController extends Controller
     }
 
     /** Update episode metadata */
-    public function update(Request $request, Episode $episode)
+    public function update(UpdateEpisodeRequest $request, Episode $episode)
     {
         $series = $episode->series;
         abort_if($series->author_id !== $request->user()->id, 403);
 
-        $validated = $request->validate([
-            'title'        => 'sometimes|string|max:255',
-            'is_premium'   => 'sometimes|boolean',
-            'coin_price'   => 'sometimes|integer|min:0',
-            'scheduled_at' => 'nullable|date|after:now',
-        ]);
+        $validated = $request->validated();
 
         $episode->fill($validated);
 
@@ -110,8 +103,6 @@ class EpisodeController extends Controller
         Cache::forget("episode:{$episode->id}");
         Cache::forget("author:{$request->user()->id}:series_counts");
         Cache::forget("author:{$request->user()->id}:dashboard");
-
-        // TODO: broadcast(new EpisodePublished($episode));
 
         return response()->json([
             'message' => 'Episode berhasil dipublish! 🎉',

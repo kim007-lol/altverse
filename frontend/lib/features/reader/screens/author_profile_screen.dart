@@ -12,6 +12,7 @@ import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../shared/widgets/au_card.dart';
 import 'series_detail_screen.dart';
+import 'theme_color_screen.dart';
 
 class AuthorProfileScreen extends StatefulWidget {
   final int authorId;
@@ -22,12 +23,10 @@ class AuthorProfileScreen extends StatefulWidget {
   State<AuthorProfileScreen> createState() => _AuthorProfileScreenState();
 }
 
-class _AuthorProfileScreenState extends State<AuthorProfileScreen>
-    with SingleTickerProviderStateMixin {
+class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   bool _hasError = false;
   Map<String, dynamic>? _author;
-  List<dynamic> _badges = [];
   List<dynamic> _series = [];
   List<dynamic> _topSupporters = [];
   bool _isFollowing = false;
@@ -54,14 +53,11 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
       _hasError = false;
     });
     try {
-      final res = await ApiService.get(
-        ApiEndpoints.authorProfile(widget.authorId),
-      );
-      if (res.statusCode == 200 && mounted) {
-        final data = jsonDecode(res.body);
+      final res = await ApiService.get(ApiEndpoints.authorProfile(widget.authorId));
+      if (res.success && mounted) {
+        final data = res.data;
         setState(() {
           _author = data['author'];
-          _badges = data['badges'] ?? [];
           _series = data['series'] ?? [];
           _topSupporters = data['top_supporters'] ?? [];
           _isFollowing = data['is_following'] ?? false;
@@ -89,12 +85,9 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
     final was = _isFollowing;
     setState(() => _isFollowing = !was);
     try {
-      final res = await ApiService.post(
-        ApiEndpoints.followToggle(widget.authorId),
-        {},
-      );
-      if (res.statusCode == 200 && mounted) {
-        final data = jsonDecode(res.body);
+      final res = await ApiService.post(ApiEndpoints.followToggle(widget.authorId), body: {});
+      if (res.success && mounted) {
+        final data = res.data;
         setState(() => _isFollowing = data['following'] ?? !was);
         // Refresh profile to get updated counts/badges
         _fetchProfile();
@@ -170,10 +163,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
               const SizedBox(height: 12),
               const Text('Gagal memuat profil author'),
               const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: _fetchProfile,
-                child: const Text('Coba Lagi'),
-              ),
+              ElevatedButton(onPressed: _fetchProfile, child: const Text('Coba Lagi')),
             ],
           ),
         ),
@@ -183,25 +173,15 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
     final penName = _author!['pen_name'] ?? 'Author';
     final bio = _author!['author_bio'] ?? '';
     final rawAvatar = _author!['author_avatar_url'];
-    final avatarUrl = rawAvatar != null
-        ? ApiService.getImageUrl(rawAvatar)
-        : '';
+    final avatarUrl = rawAvatar != null ? ApiService.getImageUrl(rawAvatar) : '';
     final tier = _author!['author_tier'];
     final tierCol = _tierColor(tier);
 
-    // Filter pinned badges from _badges.
-    final badgesList = _badges;
-    final pinnedBadges = badgesList
-        .where((b) => b['is_pinned'] == true)
-        .toList();
-
-    final highestBadge = _author!['highest_badge'];
     final socialLinks = _parseSocialLinks(_author!['author_social_links']);
     final followersCount = _author!['followers_count'] ?? 0;
     final seriesCount = _author!['series_count'] ?? 0;
     final totalViews = _author!['total_views'] ?? 0;
-    final isVerified =
-        _author!['is_verified'] == true || _author!['is_verified'] == 1;
+    final isVerified = _author!['is_verified'] == true || _author!['is_verified'] == 1;
     final canTip = _author!['can_tip'] == true || _author!['can_tip'] == 1;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -216,9 +196,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
             backgroundColor: theme.scaffoldBackgroundColor,
             surfaceTintColor: Colors.transparent,
             elevation: 0,
-            iconTheme: IconThemeData(
-              color: theme.textTheme.displayLarge?.color ?? Colors.black,
-            ),
+            iconTheme: IconThemeData(color: theme.textTheme.displayLarge?.color ?? Colors.black),
           ),
 
           // ═══════════════ PROFILE INFO ═══════════════
@@ -231,23 +209,13 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(color: tierCol, width: 3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: tierCol.withAlpha(60),
-                        blurRadius: 12,
-                        spreadRadius: 2,
-                      ),
-                    ],
+                    boxShadow: [BoxShadow(color: tierCol.withAlpha(60), blurRadius: 12, spreadRadius: 2)],
                   ),
                   child: CircleAvatar(
                     radius: 56, // Larger avatar
-                    backgroundColor: Colors.white,
-                    backgroundImage: avatarUrl.isNotEmpty
-                        ? CachedNetworkImageProvider(avatarUrl)
-                        : null,
-                    child: avatarUrl.isEmpty
-                        ? Icon(Icons.person, size: 56, color: Colors.grey[400])
-                        : null,
+                    backgroundColor: theme.cardColor,
+                    backgroundImage: avatarUrl.isNotEmpty ? CachedNetworkImageProvider(avatarUrl) : null,
+                    child: avatarUrl.isEmpty ? Icon(Icons.person, size: 56, color: Colors.grey[400]) : null,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -271,19 +239,6 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                       size: 20,
                       color: Colors.grey[600],
                     ),
-                    if (pinnedBadges.isNotEmpty) const SizedBox(width: 8),
-                    ...pinnedBadges.take(2).map((b) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 6.0),
-                        child: CachedNetworkImage(
-                          imageUrl: ApiService.getImageUrl(b['icon_url']),
-                          width: 24,
-                          height: 24,
-                          errorWidget: (context, url, error) =>
-                              const SizedBox(),
-                        ),
-                      );
-                    }),
                     if (isVerified) ...[
                       const SizedBox(width: 8),
                       Icon(Icons.verified, size: 24, color: theme.primaryColor),
@@ -291,64 +246,15 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                   ],
                 ),
 
-                // Highest badge
-                if (highestBadge != null) ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _hexToColor(highestBadge['color']).withAlpha(25),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _hexToColor(highestBadge['color']).withAlpha(80),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '⭐ ',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _hexToColor(highestBadge['color']),
-                          ),
-                        ),
-                        Text(
-                          highestBadge['name'] ?? '',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _hexToColor(highestBadge['color']),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
                 // Author tier
                 if (tier != null) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: tierCol.withAlpha(20),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(color: tierCol.withAlpha(20), borderRadius: BorderRadius.circular(8)),
                     child: Text(
                       '${tier[0].toUpperCase()}${tier.substring(1)} Tier',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: tierCol,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
+                      style: TextStyle(fontSize: 12, color: tierCol, fontWeight: FontWeight.w700, letterSpacing: 0.5),
                     ),
                   ),
                 ],
@@ -360,21 +266,14 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                     child: Text(
                       bio,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                        height: 1.4,
-                      ),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600], height: 1.4),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
 
                 // Social links
-                if (socialLinks.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  _buildSocialLinks(socialLinks, theme),
-                ],
+                if (socialLinks.isNotEmpty) ...[const SizedBox(height: 10), _buildSocialLinks(socialLinks, theme)],
 
                 const SizedBox(height: 24),
 
@@ -388,11 +287,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.grey.withAlpha(30)),
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(5),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
+                        BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 4)),
                       ],
                     ),
                     child: Row(
@@ -400,11 +295,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                       children: [
                         _buildStat(_formatCount(seriesCount), 'Series', theme),
                         _buildStatDivider(),
-                        _buildStat(
-                          _formatCount(followersCount),
-                          'Followers',
-                          theme,
-                        ),
+                        _buildStat(_formatCount(followersCount), 'Followers', theme),
                         _buildStatDivider(),
                         _buildStat(_formatCount(totalViews), 'Views', theme),
                       ],
@@ -423,23 +314,19 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: () =>
-                                _showEditProfileSheet(context, theme, _author),
+                            onPressed: () => _showEditProfileSheet(context, theme, _author),
                             icon: const Icon(Icons.edit_outlined, size: 18),
                             label: const Text('Edit Profile'),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         OutlinedButton.icon(
                           onPressed: () async {
-                            final url =
-                                'https://aureader.com/author/${widget.authorId}';
+                            final url = 'https://aureader.com/author/${widget.authorId}';
                             // ignore: deprecated_member_use
                             await Share.share(
                               'Check out my profile on AU Reader!\n$url',
@@ -449,13 +336,8 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                           icon: const Icon(Icons.share_outlined, size: 18),
                           label: const Text('Share'),
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 14,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
                       ],
@@ -473,37 +355,19 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                           Expanded(
                             child: FilledButton.icon(
                               onPressed: _toggleFollow,
-                              icon: Icon(
-                                _isFollowing
-                                    ? Icons.check
-                                    : Icons.person_add_alt_1,
-                                size: 20,
-                              ),
+                              icon: Icon(_isFollowing ? Icons.check : Icons.person_add_alt_1, size: 20),
                               label: Text(
                                 _isFollowing ? 'Following' : 'Follow',
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                               ),
                               style: FilledButton.styleFrom(
-                                backgroundColor: _isFollowing
-                                    ? theme.cardColor
-                                    : theme.primaryColor,
+                                backgroundColor: _isFollowing ? theme.cardColor : theme.primaryColor,
                                 foregroundColor: _isFollowing
                                     ? theme.textTheme.bodyLarge?.color
-                                    : Colors.white,
-                                side: _isFollowing
-                                    ? BorderSide(
-                                        color: Colors.grey.withAlpha(50),
-                                      )
-                                    : null,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                    : theme.colorScheme.onPrimary,
+                                side: _isFollowing ? BorderSide(color: Colors.grey.withAlpha(50)) : null,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                             ),
                           ),
@@ -513,101 +377,18 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                               onPressed: () {
                                 // TODO: navigate to tip screen
                               },
-                              icon: const Icon(
-                                Icons.monetization_on_outlined,
-                                size: 18,
-                              ),
+                              icon: const Icon(Icons.monetization_on_outlined, size: 18),
                               label: const Text('Tip'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.orange,
                                 side: const BorderSide(color: Colors.orange),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                  horizontal: 24,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                             ),
                           ],
                         ],
                       ),
-                    ),
-                  ),
-                ],
-
-                // Achievements section
-                if (_badges.isNotEmpty) ...[
-                  const SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Achievements',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: theme.textTheme.displayLarge?.color,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 80,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: _badges.length,
-                      itemBuilder: (context, i) {
-                        final badge = _badges[i];
-                        final bColor = _hexToColor(badge['color']);
-                        return GestureDetector(
-                          onTap: () => _showBadgeDetail(context, badge, theme),
-                          child: Container(
-                            width: 70,
-                            margin: const EdgeInsets.only(right: 12),
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: bColor.withAlpha(25),
-                                    border: Border.all(
-                                      color: bColor.withAlpha(120),
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '⭐',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        color: bColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  badge['name'] ?? '',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w600,
-                                    color: bColor,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
                     ),
                   ),
                 ],
@@ -621,13 +402,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                     padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Settings',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                      child: Text('Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                     ),
                   ),
                   _buildSettingsTile(
@@ -636,26 +411,23 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                     title: 'Switch to Reader',
                     subtitle: 'Browse series and earn XP',
                     onTap: () {
-                      final authProv = Provider.of<AuthProvider>(
-                        context,
-                        listen: false,
-                      );
+                      final authProv = Provider.of<AuthProvider>(context, listen: false);
                       showDialog(
                         context: context,
                         builder: (_) => AlertDialog(
                           title: const Text('Switch to Reader'),
-                          content: const Text(
-                            'Change role to Reader? You can switch back anytime.',
-                          ),
+                          content: const Text('Change role to Reader? You can switch back anytime.'),
                           actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel'),
-                            ),
+                            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
                             FilledButton(
                               onPressed: () async {
                                 Navigator.pop(context);
-                                await authProv.switchRole(role: 'reader');
+                                final ok = await authProv.switchRole(role: 'reader');
+                                if (!ok && context.mounted) {
+                                  ScaffoldMessenger.of(
+                                    context,
+                                  ).showSnackBar(SnackBar(content: Text(authProv.errorMessage ?? 'Gagal switch role')));
+                                }
                               },
                               child: const Text('Switch Role'),
                             ),
@@ -663,6 +435,12 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                         ),
                       );
                     },
+                  ),
+                  _buildSettingsTile(
+                    icon: Icons.palette_outlined,
+                    iconColor: Colors.purple[400]!,
+                    title: 'Tema Warna',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ThemeColorScreen())),
                   ),
                   _buildSettingsTile(
                     icon: Icons.settings_rounded,
@@ -675,10 +453,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                     iconColor: Colors.red[600]!,
                     title: 'Logout',
                     onTap: () async {
-                      final authProv = Provider.of<AuthProvider>(
-                        context,
-                        listen: false,
-                      );
+                      final authProv = Provider.of<AuthProvider>(context, listen: false);
                       await authProv.logout();
                       if (context.mounted) context.go('/login');
                     },
@@ -701,10 +476,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                 unselectedLabelColor: Colors.grey[500],
                 indicatorColor: theme.primaryColor,
                 indicatorSize: TabBarIndicatorSize.label,
-                labelStyle: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
+                labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 tabs: const [
                   Tab(text: 'Series'),
                   Tab(text: 'Top Supporters'),
@@ -717,11 +489,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
         ],
         body: TabBarView(
           controller: _tabController,
-          children: [
-            _buildSeriesTab(theme),
-            _buildSupportersTab(theme),
-            _buildAboutTab(theme),
-          ],
+          children: [_buildSeriesTab(theme), _buildSupportersTab(theme), _buildAboutTab(theme)],
         ),
       ),
     );
@@ -745,38 +513,22 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
 
     final igUrl = getUrl('instagram');
     if (igUrl.isNotEmpty) {
-      socialItems.add({
-        'icon': Icons.camera_alt_outlined,
-        'url': igUrl,
-        'label': 'IG',
-      });
+      socialItems.add({'icon': Icons.camera_alt_outlined, 'url': igUrl, 'label': 'IG'});
     }
 
     final tiktokUrl = getUrl('tiktok');
     if (tiktokUrl.isNotEmpty) {
-      socialItems.add({
-        'icon': Icons.music_note_outlined,
-        'url': tiktokUrl,
-        'label': 'TikTok',
-      });
+      socialItems.add({'icon': Icons.music_note_outlined, 'url': tiktokUrl, 'label': 'TikTok'});
     }
 
     final wattpadUrl = getUrl('wattpad');
     if (wattpadUrl.isNotEmpty) {
-      socialItems.add({
-        'icon': Icons.auto_stories_outlined,
-        'url': wattpadUrl,
-        'label': 'Wattpad',
-      });
+      socialItems.add({'icon': Icons.auto_stories_outlined, 'url': wattpadUrl, 'label': 'Wattpad'});
     }
 
     final twitterUrl = getUrl('twitter');
     if (twitterUrl.isNotEmpty) {
-      socialItems.add({
-        'icon': Icons.alternate_email,
-        'url': twitterUrl,
-        'label': 'X',
-      });
+      socialItems.add({'icon': Icons.alternate_email, 'url': twitterUrl, 'label': 'X'});
     }
 
     final webUrl = getUrl('website');
@@ -796,15 +548,11 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
             onTap: () {
               final url = item['url'].toString();
               if (url.isNotEmpty) {
-                final uri = Uri.parse(
-                  url.startsWith('http') ? url : 'https://$url',
-                );
-                launchUrl(uri, mode: LaunchMode.externalApplication).catchError(
-                  (e) {
-                    debugPrint('Gagal membuka URL: $e');
-                    return false;
-                  },
-                );
+                final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
+                launchUrl(uri, mode: LaunchMode.externalApplication).catchError((e) {
+                  debugPrint('Gagal membuka URL: $e');
+                  return false;
+                });
               }
             },
             child: Container(
@@ -816,19 +564,11 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    item['icon'] as IconData,
-                    size: 14,
-                    color: theme.primaryColor,
-                  ),
+                  Icon(item['icon'] as IconData, size: 14, color: theme.primaryColor),
                   const SizedBox(width: 4),
                   Text(
                     item['label'] as String,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: theme.primaryColor,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(fontSize: 11, color: theme.primaryColor, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -847,20 +587,12 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
         children: [
           Text(
             value,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: theme.textTheme.displayLarge?.color,
-            ),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: theme.textTheme.displayLarge?.color),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[500]),
           ),
         ],
       ),
@@ -875,17 +607,17 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
   Widget _buildSeriesTab(ThemeData theme) {
     if (_series.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.auto_stories_outlined,
-              size: 48,
-              color: Colors.grey[300],
-            ),
-            const SizedBox(height: 8),
-            Text('Belum ada series', style: TextStyle(color: Colors.grey[500])),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.auto_stories_outlined, size: 48, color: Colors.grey[300]),
+              const SizedBox(height: 8),
+              Text('Belum ada series', style: TextStyle(color: Colors.grey[500])),
+            ],
+          ),
         ),
       );
     }
@@ -914,12 +646,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
           genres: genres,
           subtitle: '$epCount episodes',
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => SeriesDetailScreen(seriesId: s['id']),
-              ),
-            );
+            Navigator.push(context, MaterialPageRoute(builder: (_) => SeriesDetailScreen(seriesId: s['id'])));
           },
         );
       },
@@ -933,16 +660,9 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.volunteer_activism_outlined,
-              size: 48,
-              color: Colors.grey[300],
-            ),
+            Icon(Icons.volunteer_activism_outlined, size: 48, color: Colors.grey[300]),
             const SizedBox(height: 8),
-            Text(
-              'Belum ada supporter',
-              style: TextStyle(color: Colors.grey[500]),
-            ),
+            Text('Belum ada supporter', style: TextStyle(color: Colors.grey[500])),
           ],
         ),
       );
@@ -964,20 +684,12 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: i < 3
-                ? [
-                    const Color(0xFFFFF8E1),
-                    const Color(0xFFF5F5F5),
-                    const Color(0xFFFBE9E7),
-                  ][i]
+                ? [const Color(0xFFFFF8E1), const Color(0xFFF5F5F5), const Color(0xFFFBE9E7)][i]
                 : theme.cardColor,
             borderRadius: BorderRadius.circular(16),
             border: i < 3
                 ? Border.all(
-                    color: [
-                      const Color(0xFFFFD700),
-                      const Color(0xFFC0C0C0),
-                      const Color(0xFFCD7F32),
-                    ][i].withAlpha(80),
+                    color: [const Color(0xFFFFD700), const Color(0xFFC0C0C0), const Color(0xFFCD7F32)][i].withAlpha(80),
                   )
                 : null,
           ),
@@ -987,23 +699,15 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                 width: 32,
                 child: Text(
                   i < 3 ? medals[i] : '${i + 1}',
-                  style: TextStyle(
-                    fontSize: i < 3 ? 20 : 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: i < 3 ? 20 : 16, fontWeight: FontWeight.bold, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
               ),
               const SizedBox(width: 12),
               CircleAvatar(
                 radius: 20,
-                backgroundImage: sAvatar.isNotEmpty
-                    ? CachedNetworkImageProvider(sAvatar)
-                    : null,
-                child: sAvatar.isEmpty
-                    ? const Icon(Icons.person, size: 20)
-                    : null,
+                backgroundImage: sAvatar.isNotEmpty ? CachedNetworkImageProvider(sAvatar) : null,
+                child: sAvatar.isEmpty ? const Icon(Icons.person, size: 20) : null,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1012,15 +716,9 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                   children: [
                     Text(
                       user['pen_name'] ?? user['name'] ?? 'User',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
-                    Text(
-                      '${_formatCount(total)} coins',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                    ),
+                    Text('${_formatCount(total)} coins', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                   ],
                 ),
               ),
@@ -1043,28 +741,16 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // About section
-          const Text(
-            'About',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+          const Text('About', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text(
-            bio,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-              height: 1.6,
-            ),
-          ),
+          Text(bio, style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.6)),
           const SizedBox(height: 24),
 
           // Info cards
           _buildInfoCard(
             Icons.star_rounded,
             'Author Tier',
-            tier != null
-                ? '${tier[0].toUpperCase()}${tier.substring(1)}'
-                : 'New Author',
+            tier != null ? '${tier[0].toUpperCase()}${tier.substring(1)}' : 'New Author',
             _tierColor(tier),
             theme,
           ),
@@ -1094,104 +780,26 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
     );
   }
 
-  Widget _buildInfoCard(
-    IconData icon,
-    String title,
-    String value,
-    Color color,
-    ThemeData theme,
-  ) {
+  Widget _buildInfoCard(IconData icon, String title, String value, Color color, ThemeData theme) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(14),
-      ),
+      decoration: BoxDecoration(color: Colors.grey.withAlpha(25), borderRadius: BorderRadius.circular(14)),
       child: Row(
         children: [
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
-              color: color.withAlpha(25),
-              borderRadius: BorderRadius.circular(10),
-            ),
+            decoration: BoxDecoration(color: color.withAlpha(25), borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(child: Text(title, style: const TextStyle(fontSize: 14))),
           Text(
             value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: theme.textTheme.displayLarge?.color,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.textTheme.displayLarge?.color),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showBadgeDetail(
-    BuildContext context,
-    Map<String, dynamic> badge,
-    ThemeData theme,
-  ) {
-    final bColor = _hexToColor(badge['color']);
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: bColor.withAlpha(25),
-                  border: Border.all(color: bColor, width: 2),
-                ),
-                child: Center(
-                  child: Text(
-                    '⭐',
-                    style: TextStyle(fontSize: 28, color: bColor),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                badge['name'] ?? '',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: bColor,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                badge['description'] ?? '',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                textAlign: TextAlign.center,
-              ),
-              if (badge['earned_at'] != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Earned: ${badge['earned_at']}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-                ),
-              ],
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -1208,22 +816,11 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: iconColor.withAlpha(20),
-          borderRadius: BorderRadius.circular(12),
-        ),
+        decoration: BoxDecoration(color: iconColor.withAlpha(20), borderRadius: BorderRadius.circular(12)),
         child: Icon(icon, color: iconColor, size: 24),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-      ),
-      subtitle: subtitle != null
-          ? Text(
-              subtitle,
-              style: TextStyle(color: Colors.grey[500], fontSize: 12),
-            )
-          : null,
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+      subtitle: subtitle != null ? Text(subtitle, style: TextStyle(color: Colors.grey[500], fontSize: 12)) : null,
       trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
       onTap: onTap,
     );
@@ -1232,29 +829,19 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
   // ══════════════════════════════════════════════════════════
   // EDIT PROFILE BOTTOM SHEET
   // ══════════════════════════════════════════════════════════
-  void _showEditProfileSheet(
-    BuildContext ctx,
-    ThemeData theme,
-    Map<String, dynamic>? user,
-  ) {
+  void _showEditProfileSheet(BuildContext ctx, ThemeData theme, Map<String, dynamic>? user) {
     final penNameCtrl = TextEditingController(text: user?['pen_name'] ?? '');
     final bioCtrl = TextEditingController(text: user?['author_bio'] ?? '');
 
     final socialLinks = user?['author_social_links'];
     Map<String, dynamic> links = {};
     if (socialLinks != null) {
-      links = socialLinks is String
-          ? jsonDecode(socialLinks)
-          : Map<String, dynamic>.from(socialLinks);
+      links = socialLinks is String ? jsonDecode(socialLinks) : Map<String, dynamic>.from(socialLinks);
     }
 
     final igCtrl = TextEditingController(text: _extractUrl(links, 'instagram'));
-    final tiktokCtrl = TextEditingController(
-      text: _extractUrl(links, 'tiktok'),
-    );
-    final wattpadCtrl = TextEditingController(
-      text: _extractUrl(links, 'wattpad'),
-    );
+    final tiktokCtrl = TextEditingController(text: _extractUrl(links, 'tiktok'));
+    final wattpadCtrl = TextEditingController(text: _extractUrl(links, 'wattpad'));
     final webCtrl = TextEditingController(text: _extractUrl(links, 'website'));
 
     final avatarUrl = user?['author_avatar_url'] ?? '';
@@ -1264,16 +851,9 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
     showModalBottomSheet(
       context: ctx,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          20,
-          24,
-          MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
+        padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1283,17 +863,11 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                 child: Container(
                   width: 40,
                   height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Edit Profile',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+              const Text('Edit Profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 20),
 
               // ── Avatar Picker ──
@@ -1306,9 +880,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                         final source = await showModalBottomSheet<ImageSource>(
                           context: context,
                           shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(16),
-                            ),
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                           ),
                           builder: (c) => SafeArea(
                             child: Column(
@@ -1317,14 +889,12 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                                 ListTile(
                                   leading: const Icon(Icons.camera_alt),
                                   title: const Text('Kamera'),
-                                  onTap: () =>
-                                      Navigator.pop(c, ImageSource.camera),
+                                  onTap: () => Navigator.pop(c, ImageSource.camera),
                                 ),
                                 ListTile(
                                   leading: const Icon(Icons.photo_library),
                                   title: const Text('Galeri'),
-                                  onTap: () =>
-                                      Navigator.pop(c, ImageSource.gallery),
+                                  onTap: () => Navigator.pop(c, ImageSource.gallery),
                                 ),
                               ],
                             ),
@@ -1349,18 +919,10 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                             backgroundColor: Colors.grey[200],
                             backgroundImage: file != null
                                 ? FileImage(file)
-                                : (avatarUrl.isNotEmpty
-                                          ? NetworkImage(
-                                              ApiService.getImageUrl(avatarUrl),
-                                            )
-                                          : null)
+                                : (avatarUrl.isNotEmpty ? NetworkImage(ApiService.getImageUrl(avatarUrl)) : null)
                                       as ImageProvider?,
                             child: file == null && avatarUrl.isEmpty
-                                ? Icon(
-                                    Icons.person,
-                                    size: 52,
-                                    color: Colors.grey[400],
-                                  )
+                                ? Icon(Icons.person, size: 52, color: Colors.grey[400])
                                 : null,
                           ),
                           Positioned(
@@ -1371,16 +933,9 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                               decoration: BoxDecoration(
                                 color: theme.primaryColor,
                                 shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
+                                border: Border.all(color: theme.scaffoldBackgroundColor, width: 2),
                               ),
-                              child: const Icon(
-                                Icons.camera_alt,
-                                size: 18,
-                                color: Colors.white,
-                              ),
+                              child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
                             ),
                           ),
                         ],
@@ -1394,10 +949,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
               _editField('Pen Name', penNameCtrl),
               _editField('Bio', bioCtrl, maxLines: 3),
               const SizedBox(height: 8),
-              const Text(
-                'Social Links',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-              ),
+              const Text('Social Links', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
               const SizedBox(height: 8),
               _editField('Instagram URL', igCtrl),
               _editField('TikTok URL', tiktokCtrl),
@@ -1421,27 +973,19 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                                   'author_social_links': jsonEncode({
                                     'instagram': {
                                       'url': igCtrl.text.trim(),
-                                      'is_visible': igCtrl.text
-                                          .trim()
-                                          .isNotEmpty,
+                                      'is_visible': igCtrl.text.trim().isNotEmpty,
                                     },
                                     'tiktok': {
                                       'url': tiktokCtrl.text.trim(),
-                                      'is_visible': tiktokCtrl.text
-                                          .trim()
-                                          .isNotEmpty,
+                                      'is_visible': tiktokCtrl.text.trim().isNotEmpty,
                                     },
                                     'wattpad': {
                                       'url': wattpadCtrl.text.trim(),
-                                      'is_visible': wattpadCtrl.text
-                                          .trim()
-                                          .isNotEmpty,
+                                      'is_visible': wattpadCtrl.text.trim().isNotEmpty,
                                     },
                                     'website': {
                                       'url': webCtrl.text.trim(),
-                                      'is_visible': webCtrl.text
-                                          .trim()
-                                          .isNotEmpty,
+                                      'is_visible': webCtrl.text.trim().isNotEmpty,
                                     },
                                   }),
                                 };
@@ -1458,19 +1002,15 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                                   files: files,
                                 );
 
-                                if (response.statusCode == 200) {
+                                if (response.success) {
                                   if (ctx.mounted) Navigator.pop(ctx);
                                   _fetchProfile();
                                 } else {
-                                  debugPrint(
-                                    'Profile update failed: ${response.body}',
-                                  );
+                                  debugPrint('Profile update failed: ${response.message}');
                                   if (ctx.mounted) {
                                     ScaffoldMessenger.of(ctx).showSnackBar(
                                       SnackBar(
-                                        content: Text(
-                                          'Gagal: ${response.body}',
-                                        ),
+                                        content: Text('Gagal: ${response.message}'),
                                         backgroundColor: Colors.red,
                                       ),
                                     );
@@ -1479,12 +1019,9 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                               } catch (e) {
                                 debugPrint('Profile update error: $e');
                                 if (ctx.mounted) {
-                                  ScaffoldMessenger.of(ctx).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Error: $e'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
+                                  ScaffoldMessenger.of(
+                                    ctx,
+                                  ).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
                                 }
                               } finally {
                                 isSaving.value = false;
@@ -1494,18 +1031,13 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
                         backgroundColor: theme.primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       child: saving
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
                           : const Text('Simpan'),
                     );
@@ -1520,11 +1052,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
     );
   }
 
-  Widget _editField(
-    String label,
-    TextEditingController ctrl, {
-    int maxLines = 1,
-  }) {
+  Widget _editField(String label, TextEditingController ctrl, {int maxLines = 1}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
@@ -1535,15 +1063,9 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen>
           labelText: label,
           labelStyle: TextStyle(fontSize: 13, color: Colors.grey[600]),
           filled: true,
-          fillColor: Colors.grey[100],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
+          fillColor: Theme.of(context).cardColor,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         ),
       ),
     );
@@ -1565,11 +1087,7 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverTabBarDelegate(this.tabBar, this.backgroundColor);
 
   @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(color: backgroundColor, child: tabBar);
   }
 
@@ -1581,7 +1099,6 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _SliverTabBarDelegate oldDelegate) {
-    return tabBar != oldDelegate.tabBar ||
-        backgroundColor != oldDelegate.backgroundColor;
+    return tabBar != oldDelegate.tabBar || backgroundColor != oldDelegate.backgroundColor;
   }
 }

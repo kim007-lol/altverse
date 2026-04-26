@@ -1,0 +1,51 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter: Run on Chrome",
+      "type": "dart",
+      "request": "launch",
+      "program": "frontend/lib/main.dart",
+      "cwd": "frontend",
+      "args": [
+        "-d",
+        "chrome"
+      ]
+    },
+    {
+      "name": "Flutter: Run on Windows",
+      "type": "dart",
+      "request": "launch",
+      "program": "frontend/lib/main.dart",
+      "cwd": "frontend",
+      "args": [
+        "-d",
+        "windows"
+      ]
+    },
+    {
+      "name": "Flutter: Run on Android",
+      "type": "dart",
+      "request": "launch",
+      "program": "frontend/lib/main.dart",
+      "cwd": "frontend"
+    },
+    {
+      "name": "Flutter: Profile Mode",
+      "type": "dart",
+      "request": "launch",
+      "program": "frontend/lib/main.dart",
+      "cwd": "frontend",
+      "flutterMode": "profile"
+    },
+    {
+      "name": "Flutter: Release Mode",
+      "type": "dart",
+      "request": "launch",
+      "program": "frontend/lib/main.dart",
+      "cwd": "frontend",
+      "flutterMode": "release"
+    }
+  ],
+  "compounds": []
+}

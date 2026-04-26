@@ -1,7 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
+import '../../shared/providers/notification_provider.dart';
 
 /// Author Notification Screen — shows author-specific notifications
 /// (episode unlocks, tips, new followers, tier ups, badge earned)
@@ -29,8 +30,8 @@ class _AuthorNotificationScreenState extends State<AuthorNotificationScreen> {
       final res = await ApiService.get(
         '${ApiEndpoints.notifications}?role=author',
       );
-      if (res.statusCode == 200) {
-        final json = jsonDecode(res.body);
+      if (res.success) {
+        final json = res.data;
         if (mounted) {
           setState(() {
             _notifications = (json['data'] ?? []) as List;
@@ -144,8 +145,15 @@ class _AuthorNotificationScreenState extends State<AuthorNotificationScreen> {
                           child: ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 20),
                             itemCount: _notifications.length,
-                            itemBuilder: (_, i) =>
-                                _buildNotifTile(_notifications[i], theme),
+                            itemBuilder: (_, i) => GestureDetector(
+                              onTap: () {
+                                final isUnread = _notifications[i]['is_read'] != true;
+                                if (isUnread) {
+                                  _markRead(_notifications[i]['id'].toString(), i);
+                                }
+                              },
+                              child: _buildNotifTile(_notifications[i], theme),
+                            ),
                           ),
                         ),
                       ],
@@ -158,7 +166,7 @@ class _AuthorNotificationScreenState extends State<AuthorNotificationScreen> {
     final isRead = notif['is_read'] == true;
     final type = notif['type'] ?? '';
     final icon = _notifIcon(type);
-    final color = _notifColor(type);
+    final color = _notifColor(type, theme);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -228,10 +236,26 @@ class _AuthorNotificationScreenState extends State<AuthorNotificationScreen> {
 
   Future<void> _markAllRead() async {
     try {
-      await ApiService.post(ApiEndpoints.notificationMarkAllRead, {
+      await ApiService.post(ApiEndpoints.notificationMarkAllRead, body: {
         'role': 'author',
       });
+      if (mounted) {
+        context.read<NotificationProvider>().clearUnreadCount();
+      }
       _fetch();
+    } catch (_) {}
+  }
+
+  Future<void> _markRead(String id, int index) async {
+    try {
+      final res = await ApiService.post(ApiEndpoints.notificationMarkRead(id), body: {});
+      if (res.success && mounted) {
+        setState(() {
+          _notifications[index]['is_read'] = true;
+          _unreadCount = _unreadCount > 0 ? _unreadCount - 1 : 0;
+        });
+        context.read<NotificationProvider>().decrementUnreadCount();
+      }
     } catch (_) {}
   }
 
@@ -248,10 +272,10 @@ class _AuthorNotificationScreenState extends State<AuthorNotificationScreen> {
     _ => Icons.campaign_rounded,
   };
 
-  Color _notifColor(String type) => switch (type) {
+  Color _notifColor(String type, ThemeData theme) => switch (type) {
     'episode_unlock' => Colors.orange,
     'tip_received' => Colors.pink,
-    'new_follower' => Colors.purple,
+    'new_follower' => theme.primaryColor,
     'comment_reply' => Colors.teal,
     'badge_earned' => Colors.amber.shade700,
     'tier_up' => Colors.blue,

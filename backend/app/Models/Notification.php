@@ -13,6 +13,8 @@ class Notification extends Model
         'id',
         'user_id',
         'type',
+        'group_key',
+        'target_role',
         'title',
         'body',
         'data',

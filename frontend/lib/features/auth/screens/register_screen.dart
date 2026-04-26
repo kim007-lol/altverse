@@ -126,14 +126,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () {
             if (_currentStep == 1) {
               _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
@@ -145,7 +146,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         title: Text(
           _currentStep == 0 ? 'Create Account' : 'Choose Your Role',
-          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+          style: TextStyle(color: theme.textTheme.titleLarge?.color, fontWeight: FontWeight.bold),
         ),
       ),
       body: PageView(
@@ -161,18 +162,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
           padding: const EdgeInsets.all(24.0),
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFC084FC),
-              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 0,
             ),
             onPressed: authProvider.isLoading ? null : _nextStep,
             child: authProvider.isLoading
-                ? const SizedBox(
+                ? SizedBox(
                     height: 20,
                     width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: theme.scaffoldBackgroundColor),
                   )
                 : Text(
                     _currentStep == 0 ? 'Continue' : 'Create Account',
@@ -205,7 +204,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               hintText: 'your@email.com',
               hintStyle: TextStyle(color: Colors.grey[400]),
               filled: true,
-              fillColor: Colors.grey[100],
+              fillColor: Theme.of(context).cardColor,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
@@ -221,7 +220,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               hintText: 'Your full name',
               hintStyle: TextStyle(color: Colors.grey[400]),
               filled: true,
-              fillColor: Colors.grey[100],
+              fillColor: Theme.of(context).cardColor,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
@@ -237,7 +236,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               hintText: '••••••••',
               hintStyle: TextStyle(color: Colors.grey[400]),
               filled: true,
-              fillColor: Colors.grey[100],
+              fillColor: Theme.of(context).cardColor,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               suffixIcon: IconButton(
@@ -257,7 +256,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               hintText: '••••••••',
               hintStyle: TextStyle(color: Colors.grey[400]),
               filled: true,
-              fillColor: Colors.grey[100],
+              fillColor: Theme.of(context).cardColor,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               suffixIcon: IconButton(
@@ -313,7 +312,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Column(
@@ -340,7 +339,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 hintText: 'Your pen name',
                 hintStyle: TextStyle(color: Colors.grey[400]),
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: Theme.of(context).cardColor,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
@@ -355,7 +354,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 hintText: 'Write a short bio...',
                 hintStyle: TextStyle(color: Colors.grey[400]),
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: Theme.of(context).cardColor,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
@@ -384,7 +383,7 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const purple = Color(0xFFC084FC);
+    final theme = Theme.of(context);
 
     return GestureDetector(
       onTap: onTap,
@@ -392,23 +391,23 @@ class _RoleCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? purple.withAlpha(25) : Colors.grey[50],
+          color: isSelected ? theme.primaryColor.withAlpha(25) : theme.cardColor,
           border: Border.all(
-            color: isSelected ? purple : Colors.transparent,
+            color: isSelected ? theme.primaryColor : Colors.transparent,
             width: 2,
           ),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 48, color: isSelected ? purple : Colors.grey[400]),
+            Icon(icon, size: 48, color: isSelected ? theme.primaryColor : Colors.grey[400]),
             const SizedBox(height: 12),
             Text(
               title,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isSelected ? purple : Colors.black87,
+                color: isSelected ? theme.primaryColor : theme.textTheme.bodyLarge?.color,
               ),
             ),
             const SizedBox(height: 4),

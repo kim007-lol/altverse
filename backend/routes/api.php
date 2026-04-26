@@ -48,6 +48,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('unread-count', [NotificationController::class, 'unreadCount']);
         Route::post('{id}/read', [NotificationController::class, 'markRead']);
         Route::post('read-all', [NotificationController::class, 'markAllRead']);
+        Route::get('preferences', [NotificationController::class, 'preferences']);
+        Route::put('preferences', [NotificationController::class, 'updatePreferences']);
+        Route::delete('cleanup', [NotificationController::class, 'cleanup']);
     });
 
     // ── Wallet (info visible to all, earning restricted to readers) ──
@@ -66,7 +69,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // ── Missions (Reader only — Authors cannot farm XP) ──
     Route::prefix('missions')->middleware('reader-only')->group(function () {
         Route::get('/', [MissionController::class, 'index']);
-        Route::post('{code}/claim', [MissionController::class, 'claim']);
+        Route::post('{mission}/claim', [MissionController::class, 'claim']);
     });
 
     Route::post('users/badges/{badge}/pin', [BadgeController::class, 'pin']);
@@ -85,6 +88,15 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('episodes/{episode}/comments', [CommentController::class, 'store']);
     Route::post('comments/{comment}/like', [CommentController::class, 'toggleLike']);
     Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
+    
+    // ── Reports (semua role) ──
+    Route::prefix('reports')->group(function () {
+        Route::get('reasons', [\App\Http\Controllers\Api\V1\ReportController::class, 'reasons']);
+        Route::get('/', [\App\Http\Controllers\Api\V1\ReportController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Api\V1\ReportController::class, 'store']);
+        Route::get('{report}', [\App\Http\Controllers\Api\V1\ReportController::class, 'show']);
+        Route::delete('{report}', [\App\Http\Controllers\Api\V1\ReportController::class, 'destroy']);
+    });
 
     // ─── Shared Reader Endpoints (Accessible to both Readers and Authors) ───
     Route::prefix('reader')->group(function () {
@@ -104,6 +116,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // FYP & Search
         Route::get('fyp', [FypController::class, 'index']);
         Route::get('search', [SearchController::class, 'index']);
+        Route::get('search/suggestions', [SearchController::class, 'suggestions']);
+        Route::get('search/history', [SearchController::class, 'history']);
+        Route::delete('search/history', [SearchController::class, 'clearHistory']);
 
         // Private Profile (My Profile)
         Route::get('profile', [ReaderProfileController::class, 'me']);
@@ -133,8 +148,15 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::delete('collections/{collection}', [CollectionController::class, 'destroy']);
         Route::post('collections/{collection}/series', [CollectionController::class, 'addSeries']);
         Route::delete('collections/{collection}/series/{series}', [CollectionController::class, 'removeSeries']);
+        
         // Comments
-        Route::get('my-comments', [\App\Http\Controllers\Api\V1\CommentController::class, 'userComments']);
+        Route::get('my-comments', [CommentController::class, 'userComments']);
+
+        // Top-Up (Midtrans)
+        Route::get('topup/packages', [\App\Http\Controllers\Api\V1\Reader\TopUpController::class, 'packages']);
+        Route::get('topup/history', [\App\Http\Controllers\Api\V1\Reader\TopUpController::class, 'history']);
+        Route::post('topup/create', [\App\Http\Controllers\Api\V1\Reader\TopUpController::class, 'create']);
+        Route::post('topup/check-status', [\App\Http\Controllers\Api\V1\Reader\TopUpController::class, 'checkStatus']);
     });
 
     // ─── Author (role-guarded) ───
@@ -142,6 +164,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // Dashboard & Counts
         Route::get('dashboard', [SeriesController::class, 'dashboard']);
         Route::get('series-counts', [SeriesController::class, 'counts']);
+
+        // Withdrawal
+        Route::get('withdrawals', [\App\Http\Controllers\Api\V1\Author\WithdrawalController::class, 'index']);
+        Route::post('withdrawals', [\App\Http\Controllers\Api\V1\Author\WithdrawalController::class, 'store']);
 
         // Series CRUD
         Route::get('series', [SeriesController::class, 'index']);
@@ -170,6 +196,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('analytics/trend', [AnalyticsController::class, 'trend']);
         Route::get('analytics/top-series', [AnalyticsController::class, 'topSeries']);
         Route::get('analytics/top-episodes', [AnalyticsController::class, 'topEpisodes']);
+        Route::get('analytics/engagement', [AnalyticsController::class, 'engagement']);
+        Route::get('analytics/export', [AnalyticsController::class, 'export']);
     });
 
     // ═══════════════════════════════════════════════════════
@@ -198,17 +226,32 @@ Route::prefix('v1/public')->group(function () {
     });
 
     Route::get('images/{path}', function ($path) {
-        $temporaryUrl = \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl(
-            $path,
-            now()->addMinutes(60)
-        );
-        return redirect($temporaryUrl);
+        // Stream image directly from R2/S3 through Laravel
+        // (R2 presigned GET URLs return 403, and public URL is not enabled)
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = \Illuminate\Support\Facades\Storage::disk('s3');
+
+        if (!$disk->exists($path)) {
+            abort(404, 'Image not found');
+        }
+
+        $file = $disk->get($path);
+        $mimeType = $disk->mimeType($path) ?: 'image/jpeg';
+        $size = $disk->size($path);
+        $lastModified = $disk->lastModified($path);
+
+        return response($file, 200)
+            ->header('Content-Type', $mimeType)
+            ->header('Content-Length', $size)
+            ->header('Cache-Control', 'public, max-age=86400') // 24h cache
+            ->header('Last-Modified', gmdate('D, d M Y H:i:s', $lastModified) . ' GMT')
+            ->header('ETag', '"' . md5($path . $lastModified) . '"');
     })->where('path', '.*');
 });
 
 // ═══════════════════════════════════════════════════════
-// STUB: Payment Webhook (no auth — called by payment provider)
+// Midtrans Payment Webhook (no auth — validated via signature)
 // ═══════════════════════════════════════════════════════
 Route::prefix('v1/webhooks')->group(function () {
-    Route::post('payment', fn() => response()->json(['message' => 'Payment provider not configured'], 501));
+    Route::post('midtrans', [\App\Http\Controllers\Api\V1\MidtransWebhookController::class, 'handle']);
 });

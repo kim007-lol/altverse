@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
@@ -48,8 +47,8 @@ class _LibraryScreenState extends State<LibraryScreen>
     setState(() => _bookmarksLoading = true);
     try {
       final res = await ApiService.get(ApiEndpoints.bookmarks);
-      if (res.statusCode == 200 && mounted) {
-        final body = jsonDecode(res.body);
+      if (res.success && mounted) {
+        final body = res.data;
         setState(() {
           _bookmarks = body['data'] ?? [];
           _bookmarksLoading = false;
@@ -67,8 +66,8 @@ class _LibraryScreenState extends State<LibraryScreen>
     setState(() => _historyLoading = true);
     try {
       final res = await ApiService.get(ApiEndpoints.readingHistory);
-      if (res.statusCode == 200 && mounted) {
-        final body = jsonDecode(res.body);
+      if (res.success && mounted) {
+        final body = res.data;
         setState(() {
           _history = body['data'] ?? [];
           _historyLoading = false;
@@ -86,8 +85,8 @@ class _LibraryScreenState extends State<LibraryScreen>
     setState(() => _unlockedLoading = true);
     try {
       final res = await ApiService.get(ApiEndpoints.unlockedEpisodes);
-      if (res.statusCode == 200 && mounted) {
-        final body = jsonDecode(res.body);
+      if (res.success && mounted) {
+        final body = res.data;
         setState(() {
           _unlocked = body['data'] ?? [];
           _unlockedLoading = false;

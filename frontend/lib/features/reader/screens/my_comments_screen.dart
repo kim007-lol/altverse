@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../core/constants/api_endpoints.dart';
@@ -36,12 +35,10 @@ class _MyCommentsScreenState extends State<MyCommentsScreen> {
     }
 
     try {
-      final res = await ApiService.get(
-        '${ApiEndpoints.myComments}?page=$_currentPage',
-      );
+      final res = await ApiService.get('${ApiEndpoints.myComments}?page=$_currentPage');
 
-      if (res.statusCode == 200) {
-        final bodyData = jsonDecode(res.body);
+      if (res.success) {
+        final bodyData = res.data;
         final dataList = bodyData['data'] as List;
         setState(() {
           if (loadMore) {
@@ -70,10 +67,7 @@ class _MyCommentsScreenState extends State<MyCommentsScreen> {
         title: const Text('Hapus Komentar?'),
         content: const Text('Tidakan ini tidak dapat dibatalkan.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600),
@@ -91,14 +85,10 @@ class _MyCommentsScreenState extends State<MyCommentsScreen> {
       setState(() {
         _comments.removeAt(index);
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Komentar dihapus')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Komentar dihapus')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Gagal menghapus komentar')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal menghapus komentar')));
     }
   }
 
@@ -125,10 +115,7 @@ class _MyCommentsScreenState extends State<MyCommentsScreen> {
             const Icon(Icons.error_outline, size: 48, color: Colors.grey),
             const SizedBox(height: 16),
             const Text('Gagal memuat komentar'),
-            TextButton(
-              onPressed: () => _fetchComments(),
-              child: const Text('Coba Lagi'),
-            ),
+            TextButton(onPressed: () => _fetchComments(), child: const Text('Coba Lagi')),
           ],
         ),
       );
@@ -141,10 +128,7 @@ class _MyCommentsScreenState extends State<MyCommentsScreen> {
           children: [
             Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            Text(
-              'Belum ada komentar',
-              style: TextStyle(color: Colors.grey[500], fontSize: 16),
-            ),
+            Text('Belum ada komentar', style: TextStyle(color: Colors.grey[500], fontSize: 16)),
           ],
         ),
       );
@@ -186,16 +170,10 @@ class _MyCommentsScreenState extends State<MyCommentsScreen> {
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: theme.cardColor,
+              color: Colors.grey.withAlpha(25),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.withAlpha(30)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(5),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              border: Border.all(color: Colors.grey.withAlpha(50)),
+              boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 4))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,45 +185,27 @@ class _MyCommentsScreenState extends State<MyCommentsScreen> {
                     Expanded(
                       child: Text(
                         seriesStr,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Text(
-                      timeStr,
-                      style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-                    ),
+                    Text(timeStr, style: TextStyle(fontSize: 11, color: Colors.grey[400])),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  comment['body'] ?? '',
-                  style: const TextStyle(height: 1.4, fontSize: 14),
-                ),
+                Text(comment['body'] ?? '', style: const TextStyle(height: 1.4, fontSize: 14)),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.thumb_up_alt_rounded,
-                          size: 14,
-                          color: Colors.grey[400],
-                        ),
+                        Icon(Icons.thumb_up_alt_rounded, size: 14, color: Colors.grey[400]),
                         const SizedBox(width: 4),
                         Text(
                           '${comment['likes_count'] ?? 0}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -254,11 +214,7 @@ class _MyCommentsScreenState extends State<MyCommentsScreen> {
                       borderRadius: BorderRadius.circular(8),
                       child: Padding(
                         padding: const EdgeInsets.all(4.0),
-                        child: Icon(
-                          Icons.delete_outline,
-                          size: 18,
-                          color: theme.colorScheme.error,
-                        ),
+                        child: Icon(Icons.delete_outline, size: 18, color: theme.colorScheme.error),
                       ),
                     ),
                   ],

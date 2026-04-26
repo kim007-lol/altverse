@@ -1,7 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../../../core/services/api_service.dart';
-import '../../../core/constants/api_endpoints.dart';
+import 'package:provider/provider.dart';
+import '../../gamification/providers/mission_provider.dart';
+import '../../gamification/models/mission.dart';
+import '../../../core/services/auth_provider.dart';
 
 class MissionsScreen extends StatefulWidget {
   const MissionsScreen({super.key});
@@ -10,236 +11,254 @@ class MissionsScreen extends StatefulWidget {
   State<MissionsScreen> createState() => _MissionsScreenState();
 }
 
-class _MissionsScreenState extends State<MissionsScreen> {
-  bool _isLoading = true;
-  bool _hasError = false;
-  List<dynamic> _missions = [];
+class _MissionsScreenState extends State<MissionsScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _fetchMissions();
-  }
-
-  Future<void> _fetchMissions() async {
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
+    _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MissionProvider>().fetchMissions();
     });
-
-    try {
-      final res = await ApiService.get(ApiEndpoints.missions);
-      if (res.statusCode == 200 && mounted) {
-        final body = jsonDecode(res.body);
-        setState(() {
-          _missions = body['missions'] ?? [];
-          _isLoading = false;
-        });
-      } else {
-        if (mounted) setState(() => _hasError = true);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _hasError = true);
-    }
   }
 
-  void _showHowXpWorks() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.star, color: Colors.amber, size: 28),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Cara Kerja XP',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'XP (Experience Points) hanya didapatkan dengan menyelesaikan misi harian (seperti login harian, menyelesaikan bacaan episode, atau berkomentar). XP tidak bisa dibeli dengan Coins.',
-                style: TextStyle(
-                  fontSize: 16,
-                  height: 1.5,
-                  color: isDark ? Colors.grey[300] : Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Gunakan XP untuk menaikkan Level kamu, memanjat Leaderboard Top XP, dan memprioritaskan komentarmu agar selalu tampil paling atas!',
-                style: TextStyle(
-                  fontSize: 16,
-                  height: 1.5,
-                  color: isDark ? Colors.grey[300] : Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Mengerti'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Missions'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Daily'),
+            Tab(text: 'Weekly'),
+            Tab(text: 'Achievements'),
+          ],
+        ),
+      ),
+      body: Consumer<MissionProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading && provider.missions.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-    if (_hasError) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Misi Harian')),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text('Gagal memuat misi'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _fetchMissions,
-                child: const Text('Coba Lagi'),
+          if (provider.error != null && provider.missions.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Error: ${provider.error}', textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => provider.fetchMissions(),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
+            );
+          }
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildMissionList(provider.dailyMissions, provider),
+              _buildMissionList(provider.weeklyMissions, provider),
+              _buildMissionList(provider.onceMissions, provider),
             ],
-          ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMissionList(List<Mission> missions, MissionProvider provider) {
+    if (missions.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: provider.fetchMissions,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 100),
+            Center(child: Text('No missions available')),
+          ],
         ),
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Misi Harian & XP'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            onPressed: _showHowXpWorks,
-            tooltip: 'Cara Kerja XP',
-          ),
-        ],
+    return RefreshIndicator(
+      onRefresh: provider.fetchMissions,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: missions.length,
+        itemBuilder: (context, index) {
+          final mission = missions[index];
+          return _buildMissionCard(mission, provider);
+        },
       ),
-      body: RefreshIndicator(
-        onRefresh: _fetchMissions,
-        child: ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: _missions.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final m = _missions[index];
-            final title = m['title'] ?? '';
-            final desc = m['description'] ?? '';
-            final xpReward = m['xp_reward'] ?? 0;
-            final claimsToday = m['claims_today'] ?? 0;
-            final dailyLimit = m['daily_limit'];
-            final canClaim = m['can_claim'] == true;
+    );
+  }
 
-            return Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Colors.grey.withAlpha(50)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withAlpha(30),
-                        shape: BoxShape.circle,
+  Widget _buildMissionCard(Mission mission, MissionProvider provider) {
+    final theme = Theme.of(context);
+    final double progressPercent = mission.targetCount > 0 
+        ? (mission.progress / mission.targetCount).clamp(0.0, 1.0) 
+        : 0.0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        mission.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      child: const Icon(Icons.star, color: Colors.amber),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 4),
+                      Text(
+                        mission.description,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: theme.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (mission.xpReward > 0) ...[
+                        const Icon(Icons.star, size: 14, color: Colors.amber),
+                        const SizedBox(width: 4),
+                        Text('${mission.xpReward} XP', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      ],
+                      if (mission.xpReward > 0 && mission.coinReward > 0)
+                        const SizedBox(width: 8),
+                      if (mission.coinReward > 0) ...[
+                        const Icon(Icons.monetization_on, size: 14, color: Colors.orange),
+                        const SizedBox(width: 4),
+                        Text('${mission.coinReward} Coins', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            title,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+                            'Progress',
+                            style: theme.textTheme.bodySmall,
                           ),
-                          const SizedBox(height: 4),
                           Text(
-                            desc,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 13,
+                            '${mission.progress} / ${mission.targetCount}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Text(
-                                '+$xpReward XP',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
-                                ),
-                              ),
-                              if (dailyLimit != null) ...[
-                                const SizedBox(width: 12),
-                                Text(
-                                  '$claimsToday/$dailyLimit hari ini',
-                                  style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ],
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    canClaim
-                        ? Text(
-                            'Belum Selesai',
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          )
-                        : Text(
-                            'Selesai',
-                            style: TextStyle(
-                              color: Theme.of(context).primaryColor,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ],
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        value: progressPercent,
+                        backgroundColor: Colors.grey[200],
+                        color: mission.isCompleted ? Colors.green : theme.primaryColor,
+                        minHeight: 8,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+                const SizedBox(width: 16),
+                _buildActionWidget(mission, provider),
+              ],
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildActionWidget(Mission mission, MissionProvider provider) {
+    if (mission.isClaimed) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Text(
+          'Claimed',
+          style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+
+    if (mission.canClaim) {
+      return ElevatedButton(
+        onPressed: () async {
+          final success = await provider.claimMission(mission.id);
+          if (!mounted) return;
+          if (success) {
+            context.read<AuthProvider>().refreshProfile();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Reward claimed!')),
+            );
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        child: const Text('Claim'),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Text(
+        'In Progress',
+        style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
       ),
     );
   }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Reader;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UnlockEpisodeRequest;
 use App\Models\Episode;
 use App\Models\Transaction;
 use App\Services\XpService;
@@ -30,7 +31,7 @@ class EpisodeUnlockController extends Controller
     }
 
     /** Unlock a premium episode using coins */
-    public function unlock(Request $request, Episode $episode): JsonResponse
+    public function unlock(UnlockEpisodeRequest $request, Episode $episode): JsonResponse
     {
         $user    = $request->user();
         $series  = $episode->series;
@@ -44,6 +45,11 @@ class EpisodeUnlockController extends Controller
         // Already unlocked
         if ($user->unlockedEpisodes()->where('episode_id', $episode->id)->exists()) {
             return response()->json(['message' => 'Episode sudah di-unlock'], 422);
+        }
+
+        // Cannot unlock own episode (same user = author & reader via role-switching)
+        if ((int) $series->author_id === (int) $user->id) {
+            return response()->json(['message' => 'Tidak bisa membeli episode sendiri'], 422);
         }
 
         // Atomic transaction with row lock to prevent race condition (negative coins)
@@ -106,6 +112,13 @@ class EpisodeUnlockController extends Controller
 
         // Track season spending for Top Supporter & Top Author leaderboards (NO XP)
         XpService::trackSeasonSpending($user->id, $series->author_id, $price);
+
+        // Check spend badges
+        \App\Services\BadgeService::checkAndAwardBadges($user);
+
+        // Track mission progress for spending coins
+        $missionService = app(\App\Services\MissionService::class);
+        $missionService->autoTrack($user, 'spend_coins');
 
         return response()->json([
             'message'     => 'Episode berhasil di-unlock!',

@@ -16,24 +16,28 @@ class UserSeeder extends Seeder
     public function run()
     {
         // 1. Akun Reader
-        User::create([
-            'name' => 'Demo Reader',
-            'email' => 'reader@test.com',
-            'password' => Hash::make('password'),
-            'role' => 'reader',
-            'coins' => 100,
-            'email_verified_at' => now(),
-        ]);
+        User::firstOrCreate(
+            ['email' => 'reader@test.com'],
+            [
+                'name' => 'Demo Reader',
+                'password' => Hash::make('password'),
+                'role' => 'reader',
+                'coins' => 100,
+                'email_verified_at' => now(),
+            ]
+        );
 
         // 2. Akun Author
-        User::create([
-            'name' => 'Demo Author',
-            'email' => 'author@test.com',
-            'password' => Hash::make('password'),
-            'role' => 'author',
-            'pen_name' => 'Author Kece',
-            'coins' => 500,
-            'email_verified_at' => now(),
-        ]);
+        User::firstOrCreate(
+            ['email' => 'author@test.com'],
+            [
+                'name' => 'Demo Author',
+                'password' => Hash::make('password'),
+                'role' => 'author',
+                'pen_name' => 'Author Kece',
+                'coins' => 500,
+                'email_verified_at' => now(),
+            ]
+        );
     }
 }

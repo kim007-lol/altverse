@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
@@ -24,8 +23,8 @@ class _WalletScreenState extends State<WalletScreen> {
   Future<void> _fetchWallet() async {
     try {
       final res = await ApiService.get(ApiEndpoints.wallet);
-      if (res.statusCode == 200) {
-        final json = jsonDecode(res.body);
+      if (res.success) {
+        final json = res.data;
         if (mounted) {
           setState(() {
             _data = json;

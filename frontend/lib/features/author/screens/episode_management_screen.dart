@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
@@ -8,15 +7,10 @@ class EpisodeManagementScreen extends StatefulWidget {
   final int seriesId;
   final String seriesTitle;
 
-  const EpisodeManagementScreen({
-    super.key,
-    required this.seriesId,
-    required this.seriesTitle,
-  });
+  const EpisodeManagementScreen({super.key, required this.seriesId, required this.seriesTitle});
 
   @override
-  State<EpisodeManagementScreen> createState() =>
-      _EpisodeManagementScreenState();
+  State<EpisodeManagementScreen> createState() => _EpisodeManagementScreenState();
 }
 
 class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
@@ -30,13 +24,16 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
     _fetchEpisodes();
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   Future<void> _fetchEpisodes() async {
     try {
-      final response = await ApiService.get(
-        ApiEndpoints.authorEpisodes(widget.seriesId),
-      );
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+      final response = await ApiService.get(ApiEndpoints.authorEpisodes(widget.seriesId));
+      if (response.success) {
+        final List<dynamic> data = response.data;
         setState(() {
           _episodes.clear();
           for (var item in data) {
@@ -49,6 +46,8 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
                 pagesCount: item['pages_count'] ?? 0,
                 coverUrl: item['cover_url'],
                 publishedAt: item['published_at'],
+                isPremium: item['is_premium'] ?? false,
+                coinPrice: item['coin_price'] ?? 0,
               ),
             );
           }
@@ -56,8 +55,7 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
         });
       } else {
         setState(() {
-          _errorMessage =
-              'Gagal mengambil data episode (${response.statusCode})';
+          _errorMessage = 'Gagal mengambil data episode (${response.statusCode})';
           _isLoading = false;
         });
       }
@@ -77,38 +75,25 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Manajemen Episode',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Colors.black87,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: theme.textTheme.titleLarge?.color),
             ),
             Text(
               widget.seriesTitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.normal,
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey[400], fontWeight: FontWeight.normal),
             ),
           ],
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_box_rounded),
-            onPressed: () => _addEpisode(),
-          ),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.add_box_rounded), onPressed: () => _addEpisode())],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -147,10 +132,7 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
                     onPressed: () => _addEpisode(),
                     icon: const Icon(Icons.add),
                     label: const Text('Buat Episode Pertama'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primaryColor,
-                      foregroundColor: Colors.white,
-                    ),
+                    style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor, foregroundColor: Colors.white),
                   ),
                 ],
               ),
@@ -167,8 +149,8 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
                     theme: theme,
                     onTap: () => _openPreview(episode),
                     onEdit: () => _openPageEditor(episode),
-                    onPublish:
-                        episode.status == 'draft' && episode.pagesCount > 0
+                    onSettings: () => _openSettings(episode),
+                    onPublish: episode.status == 'draft' && episode.pagesCount > 0
                         ? () => _publishEpisode(episode)
                         : null,
                     onDelete: () => _deleteEpisode(episode, i),
@@ -186,24 +168,14 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
     final title = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          24,
-          24,
-          MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'New Episode',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
+            const Text('New Episode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 16),
             TextField(
               controller: titleCtrl,
@@ -211,15 +183,9 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
                 hintText: 'e.g. Episode 1: The Beginning',
                 hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
                 filled: true,
-                fillColor: Colors.grey[100],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
+                fillColor: Theme.of(context).cardColor,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
             ),
             const SizedBox(height: 20),
@@ -231,17 +197,12 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () {
                   Navigator.pop(ctx, titleCtrl.text.trim());
                 },
-                child: const Text(
-                  'Add Episode',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+                child: const Text('Add Episode', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -253,11 +214,8 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final response = await ApiService.post(
-        ApiEndpoints.authorEpisodes(widget.seriesId),
-        {'title': title},
-      );
-      if (response.statusCode == 201) {
+      final response = await ApiService.post(ApiEndpoints.authorEpisodes(widget.seriesId), body: {'title': title});
+      if (response.success) {
         await _fetchEpisodes();
         // Open page editor for this new episode
         final newEp = _episodes.lastOrNull;
@@ -267,9 +225,9 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
       } else {
         setState(() => _isLoading = false);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal membuat episode: ${response.body}')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Gagal membuat episode: ${response.message}')));
         }
       }
     } catch (e) {
@@ -279,23 +237,17 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
 
   void _openPreview(_EpisodeDraft episode) async {
     if (episode.id == null || episode.pagesCount == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Belum ada halaman untuk di-preview')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Belum ada halaman untuk di-preview')));
       return;
     }
     setState(() => _isLoading = true);
     try {
-      final response = await ApiService.get(
-        ApiEndpoints.authorPages(episode.id!),
-      );
+      final response = await ApiService.get(ApiEndpoints.authorPages(episode.id!));
       if (mounted) setState(() => _isLoading = false);
 
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        final pages = data
-            .map((p) => ApiService.getImageUrl(p['image_path']))
-            .toList();
+      if (response.success) {
+        final List<dynamic> data = response.data;
+        final pages = data.map((p) => ApiService.getImageUrl(p['image_path'])).toList();
         if (mounted) {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -305,9 +257,7 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gagal memuat halaman preview')),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal memuat halaman preview')));
         }
       }
     } catch (_) {
@@ -320,41 +270,148 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => PageEditorScreen(
-          episodeId: episode.id!,
-          episodeTitle: episode.title,
-        ),
+        builder: (_) => PageEditorScreen(episodeId: episode.id!, episodeTitle: episode.title),
       ),
     );
     // Refresh after returning
     _fetchEpisodes();
   }
 
+  void _openSettings(_EpisodeDraft episode) async {
+    if (episode.id == null) return;
+    
+    bool isPremium = episode.isPremium;
+    final priceCtrl = TextEditingController(text: episode.coinPrice > 0 ? episode.coinPrice.toString() : '5');
+    final titleCtrl = TextEditingController(text: episode.title);
+    
+    final theme = Theme.of(context);
+
+    await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Pengaturan Episode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: titleCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Judul Episode',
+                  filled: true,
+                  fillColor: theme.cardColor,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: isPremium ? Colors.orange.withValues(alpha: 0.1) : theme.cardColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isPremium ? Colors.orange : Colors.transparent),
+                ),
+                child: SwitchListTile(
+                  title: const Text('Episode Premium', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Pembaca harus membeli dengan koin untuk membaca episode ini.'),
+                  value: isPremium,
+                  activeTrackColor: Colors.orange,
+                  onChanged: (val) => setModalState(() => isPremium = val),
+                ),
+              ),
+              if (isPremium) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: priceCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Harga (Koin)',
+                    prefixIcon: const Icon(Icons.monetization_on, color: Colors.amber),
+                    filled: true,
+                    fillColor: theme.cardColor,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () async {
+                    final newTitle = titleCtrl.text.trim();
+                    final newPrice = int.tryParse(priceCtrl.text) ?? 5;
+                    
+                    if (newTitle.isEmpty) return;
+
+                    Navigator.pop(ctx, true);
+                    
+                    setState(() => _isLoading = true);
+                    try {
+                      final response = await ApiService.patch(
+                        ApiEndpoints.authorEpisodeUpdate(episode.id!),
+                        body: {
+                          'title': newTitle,
+                          'is_premium': isPremium,
+                          'coin_price': isPremium ? newPrice : 0,
+                        },
+                      );
+                      
+                      if (response.success) {
+                        _fetchEpisodes();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Pengaturan episode disimpan!'), backgroundColor: Colors.green),
+                          );
+                        }
+                      } else {
+                        setState(() => _isLoading = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(response.message), backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      setState(() => _isLoading = false);
+                    }
+                  },
+                  child: const Text('Simpan Pengaturan', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _publishEpisode(_EpisodeDraft episode) async {
     if (episode.id == null) return;
     setState(() => _isLoading = true);
     try {
-      final response = await ApiService.post(
-        ApiEndpoints.authorEpisodePublish(episode.id!),
-        {},
-      );
-      if (response.statusCode == 200) {
+      final response = await ApiService.post(ApiEndpoints.authorEpisodePublish(episode.id!), body: {});
+      if (response.success) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Episode berhasil dipublish! 🎉'),
-              backgroundColor: Colors.green,
-            ),
+            const SnackBar(content: Text('Episode berhasil dipublish! 🎉'), backgroundColor: Colors.green),
           );
         }
         _fetchEpisodes();
       } else {
         setState(() => _isLoading = false);
-        final body = jsonDecode(response.body);
+        final body = response.data;
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(body['message'] ?? 'Gagal publish')),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(body['message'] ?? 'Gagal publish')));
         }
       }
     } catch (e) {
@@ -368,14 +425,9 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Hapus Episode?'),
-        content: Text(
-          'Apakah kamu yakin ingin menghapus "${episode.title}"? Semua halaman akan ikut terhapus.',
-        ),
+        content: Text('Apakah kamu yakin ingin menghapus "${episode.title}"? Semua halaman akan ikut terhapus.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
@@ -388,17 +440,13 @@ class _EpisodeManagementScreenState extends State<EpisodeManagementScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final response = await ApiService.delete(
-        ApiEndpoints.authorEpisodeDelete(episode.id!),
-      );
-      if (response.statusCode == 200) {
+      final response = await ApiService.delete(ApiEndpoints.authorEpisodeDelete(episode.id!));
+      if (response.success) {
         _fetchEpisodes();
       } else {
         setState(() => _isLoading = false);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gagal menghapus episode')),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal menghapus episode')));
         }
       }
     } catch (_) {
@@ -416,6 +464,8 @@ class _EpisodeDraft {
   int pagesCount;
   String? coverUrl;
   String? publishedAt;
+  bool isPremium;
+  int coinPrice;
 
   _EpisodeDraft({
     this.id,
@@ -425,6 +475,8 @@ class _EpisodeDraft {
     this.pagesCount = 0,
     this.coverUrl,
     this.publishedAt,
+    this.isPremium = false,
+    this.coinPrice = 0,
   });
 }
 
@@ -434,6 +486,7 @@ class _EpisodeTile extends StatelessWidget {
   final ThemeData theme;
   final VoidCallback onTap;
   final VoidCallback onEdit;
+  final VoidCallback onSettings;
   final VoidCallback? onPublish;
   final VoidCallback onDelete;
 
@@ -442,6 +495,7 @@ class _EpisodeTile extends StatelessWidget {
     required this.theme,
     required this.onTap,
     required this.onEdit,
+    required this.onSettings,
     required this.onPublish,
     required this.onDelete,
   });
@@ -472,9 +526,7 @@ class _EpisodeTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.cardColor,
           borderRadius: BorderRadius.circular(14),
-          border: episode.status == 'published'
-              ? Border.all(color: Colors.green.withAlpha(30))
-              : null,
+          border: episode.status == 'published' ? Border.all(color: Colors.green.withAlpha(30)) : null,
         ),
         child: Row(
           children: [
@@ -489,11 +541,7 @@ class _EpisodeTile extends StatelessWidget {
               child: Center(
                 child: Text(
                   'Ep${episode.episodeNumber}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                    color: theme.primaryColor,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: theme.primaryColor),
                 ),
               ),
             ),
@@ -503,16 +551,31 @@ class _EpisodeTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    episode.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+                    episode.title, 
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '${episode.pagesCount} halaman',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Text('${episode.pagesCount} halaman', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                      if (episode.isPremium)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.lock, size: 12, color: Colors.orange[400]),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${episode.coinPrice} Coins',
+                              style: TextStyle(fontSize: 11, color: Colors.orange[600], fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
                 ],
               ),
@@ -520,44 +583,35 @@ class _EpisodeTile extends StatelessWidget {
             // Status badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: statusColor.withAlpha(25),
-                borderRadius: BorderRadius.circular(8),
-              ),
+              decoration: BoxDecoration(color: statusColor.withAlpha(25), borderRadius: BorderRadius.circular(8)),
               child: Text(
                 statusText,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: statusColor,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(width: 4),
-            // Edit button
+            // Edit Pages button
             IconButton(
               icon: Icon(Icons.edit_note, size: 20, color: theme.primaryColor),
               onPressed: onEdit,
               tooltip: 'Edit Pages',
             ),
+            // Settings button
+            IconButton(
+              icon: Icon(Icons.settings_outlined, size: 20, color: Colors.grey[600]),
+              onPressed: onSettings,
+              tooltip: 'Episode Settings',
+            ),
             // Publish button (only for drafts with pages)
             if (onPublish != null)
               IconButton(
-                icon: Icon(
-                  Icons.publish_rounded,
-                  size: 20,
-                  color: Colors.green[600],
-                ),
+                icon: Icon(Icons.publish_rounded, size: 20, color: Colors.green[600]),
                 onPressed: onPublish,
                 tooltip: 'Publish',
               ),
             // Delete button
             IconButton(
-              icon: Icon(
-                Icons.delete_outline,
-                size: 18,
-                color: Colors.red[400],
-              ),
+              icon: Icon(Icons.delete_outline, size: 18, color: Colors.red[400]),
               onPressed: onDelete,
             ),
           ],

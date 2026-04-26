@@ -20,5 +20,59 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Handle validation exceptions
+        $exceptions->renderable(function (\Illuminate\Validation\ValidationException $e, $request) {
+            if ($request->expectsJson()) {
+                return \App\Http\Responses\ApiResponse::validationError(
+                    $e->errors(),
+                    $e->getMessage()
+                );
+            }
+        });
+
+        // Handle model not found exceptions
+        $exceptions->renderable(function (\Illuminate\Database\Eloquent\ModelNotFoundException $e, $request) {
+            if ($request->expectsJson()) {
+                return \App\Http\Responses\ApiResponse::notFound(
+                    'Resource tidak ditemukan'
+                );
+            }
+        });
+
+        // Handle authentication exceptions
+        $exceptions->renderable(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+            if ($request->expectsJson()) {
+                return \App\Http\Responses\ApiResponse::unauthorized(
+                    'Unauthenticated'
+                );
+            }
+        });
+
+        // Handle authorization exceptions
+        $exceptions->renderable(function (\Illuminate\Auth\Access\AuthorizationException $e, $request) {
+            if ($request->expectsJson()) {
+                return \App\Http\Responses\ApiResponse::forbidden(
+                    'Forbidden'
+                );
+            }
+        });
+
+        // Handle HTTP exceptions
+        $exceptions->renderable(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, $request) {
+            if ($request->expectsJson()) {
+                return \App\Http\Responses\ApiResponse::error(
+                    $e->getMessage() ?: 'Error',
+                    $e->getStatusCode()
+                );
+            }
+        });
+
+        // Handle general exceptions in production
+        $exceptions->renderable(function (\Throwable $e, $request) {
+            if ($request->expectsJson() && !config('app.debug')) {
+                return \App\Http\Responses\ApiResponse::serverError(
+                    'Terjadi kesalahan pada server'
+                );
+            }
+        });
     })->create();

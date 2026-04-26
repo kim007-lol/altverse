@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Author;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreSeriesRequest;
+use App\Http\Requests\UpdateSeriesRequest;
 use App\Models\Series;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -41,15 +43,9 @@ class SeriesController extends Controller
     }
 
     /** Create new Series (draft) */
-    public function store(Request $request)
+    public function store(StoreSeriesRequest $request)
     {
-        $validated = $request->validate([
-            'title'       => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'genre'       => 'required|string',
-            'age_rating'  => 'required|in:all,13+,17+,18+',
-            'cover'       => 'nullable|image|max:4096',
-        ]);
+        $validated = $request->validated();
 
         // Upload cover ke R2 jika ada
         $coverUrl = null;
@@ -62,7 +58,7 @@ class SeriesController extends Controller
             'author_id'  => $request->user()->id,
             'title'      => $validated['title'],
             'slug'       => Str::slug($validated['title']) . '-' . Str::random(5),
-            'synopsis'   => $validated['description'],
+            'synopsis'   => $validated['synopsis'] ?? null,
             'genre'      => $validated['genre'],
             'age_rating' => $validated['age_rating'],
             'cover_url'  => $coverUrl,
@@ -72,7 +68,10 @@ class SeriesController extends Controller
         // Invalidate counts cache
         $this->invalidateCountsCache($request->user()->id);
 
-        return response()->json($series, 201);
+        // Check for "first_au" badge
+        \App\Services\BadgeService::checkFirstAuBadge($request->user());
+
+        return response()->json(['series' => $series], 201);
     }
 
     /** Update series metadata */

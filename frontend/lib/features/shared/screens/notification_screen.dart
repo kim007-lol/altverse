@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/services/api_service.dart';
-
+import '../../shared/providers/notification_provider.dart';
 import '../../../core/services/auth_provider.dart';
 
 class NotificationScreen extends StatefulWidget {
@@ -38,8 +37,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     try {
       final response = await ApiService.get('notifications?role=$role');
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      if (response.success) {
+        final data = response.data;
         if (mounted) {
           setState(() {
             _notifications = data['data'] ?? [];
@@ -61,10 +60,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final role = authProv.role;
 
     try {
-      final response = await ApiService.post('notifications/read-all', {
+      final response = await ApiService.post('notifications/read-all', body: {
         'role': role,
       });
-      if (response.statusCode == 200) {
+      if (response.success) {
+        if (mounted) {
+          context.read<NotificationProvider>().clearUnreadCount();
+        }
         _fetchNotifications();
       }
     } catch (_) {}
@@ -72,12 +74,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Future<void> _markRead(String id, int index) async {
     try {
-      final response = await ApiService.post('notifications/$id/read', {});
-      if (response.statusCode == 200) {
+      final response = await ApiService.post('notifications/$id/read', body: {});
+      if (response.success) {
         if (mounted) {
           setState(() {
             _notifications[index]['is_read'] = 1; // Mark local as read
           });
+          context.read<NotificationProvider>().decrementUnreadCount();
         }
       }
     } catch (_) {}
@@ -185,12 +188,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: _notifColor(type).withAlpha(25),
+                            color: _notifColor(type, theme).withAlpha(25),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             _notifIcon(type),
-                            color: _notifColor(type),
+                            color: _notifColor(type, theme),
                             size: 20,
                           ),
                         ),
@@ -254,13 +257,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return Icons.auto_stories;
       case 'follower':
       case 'follow':
+      case 'new_follower':
         return Icons.person_add;
       case 'comment':
+      case 'comment_reply':
         return Icons.comment;
       case 'like':
         return Icons.favorite;
       case 'reward':
         return Icons.card_giftcard;
+      case 'tip_received':
+      case 'episode_unlock':
+        return Icons.monetization_on;
       case 'welcome':
       case 'gamification':
       case 'level_up':
@@ -273,15 +281,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  Color _notifColor(String type) {
+  Color _notifColor(String type, ThemeData theme) {
     switch (type) {
       case 'episode':
       case 'publish':
         return Colors.blue;
       case 'follower':
       case 'follow':
-        return Colors.purple;
+      case 'new_follower':
+        return theme.primaryColor;
       case 'comment':
+      case 'comment_reply':
         return Colors.orange;
       case 'like':
         return Colors.red;
@@ -290,6 +300,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
       case 'level_up':
       case 'achievement':
         return Colors.green;
+      case 'tip_received':
+      case 'episode_unlock':
+        return Colors.amber;
       case 'welcome':
         return Colors.pink;
       default:

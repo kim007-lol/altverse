@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
@@ -30,8 +29,8 @@ class _FollowingScreenState extends State<FollowingScreen> {
     });
     try {
       final res = await ApiService.get(ApiEndpoints.following);
-      if (res.statusCode == 200 && mounted) {
-        final body = jsonDecode(res.body);
+      if (res.success && mounted) {
+        final body = res.data;
         setState(() {
           _authors = body['data'] ?? [];
           _isLoading = false;
@@ -54,31 +53,25 @@ class _FollowingScreenState extends State<FollowingScreen> {
 
   Future<void> _toggleFollow(int userId, int index) async {
     try {
-      final res = await ApiService.post(ApiEndpoints.followToggle(userId), {});
-      if (res.statusCode == 200 && mounted) {
-        final data = jsonDecode(res.body);
+      final res = await ApiService.post(ApiEndpoints.followToggle(userId), body: {});
+      if (res.success && mounted) {
+        final data = res.data;
         final isNowFollowing = data['following'] ?? false;
         if (!isNowFollowing) {
           // Unfollowed — remove from list
           setState(() => _authors.removeAt(index));
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Unfollow berhasil'),
-                duration: Duration(seconds: 1),
-              ),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Unfollow berhasil'), duration: Duration(seconds: 1)));
           }
         }
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal mengubah follow'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Gagal mengubah follow'), backgroundColor: Colors.red));
       }
     }
   }
@@ -96,15 +89,9 @@ class _FollowingScreenState extends State<FollowingScreen> {
           children: [
             Icon(Icons.error_outline, size: 48, color: Colors.grey[300]),
             const SizedBox(height: 12),
-            Text(
-              'Gagal memuat data',
-              style: TextStyle(color: Colors.grey[500]),
-            ),
+            Text('Gagal memuat data', style: TextStyle(color: Colors.grey[500])),
             const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: _fetchFollowing,
-              child: const Text('Coba Lagi'),
-            ),
+            ElevatedButton(onPressed: _fetchFollowing, child: const Text('Coba Lagi')),
           ],
         ),
       );
@@ -121,11 +108,7 @@ class _FollowingScreenState extends State<FollowingScreen> {
               const SizedBox(height: 16),
               Text(
                 'Belum ada yang difollow',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[600]),
               ),
               const SizedBox(height: 8),
               Text(
@@ -193,47 +176,28 @@ class _AuthorTile extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => AuthorProfileScreen(authorId: id)),
-        );
+        Navigator.push(context, MaterialPageRoute(builder: (_) => AuthorProfileScreen(authorId: id)));
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(16),
-        ),
+        decoration: BoxDecoration(color: Colors.grey.withAlpha(25), borderRadius: BorderRadius.circular(16)),
         child: Row(
           children: [
             CircleAvatar(
               radius: 28,
               backgroundColor: theme.primaryColor.withAlpha(30),
-              backgroundImage: imgUrl != null && imgUrl.isNotEmpty
-                  ? NetworkImage(imgUrl)
-                  : null,
-              child: imgUrl == null || imgUrl.isEmpty
-                  ? Icon(Icons.person, size: 28, color: theme.primaryColor)
-                  : null,
+              backgroundImage: imgUrl != null && imgUrl.isNotEmpty ? NetworkImage(imgUrl) : null,
+              child: imgUrl == null || imgUrl.isEmpty ? Icon(Icons.person, size: 28, color: theme.primaryColor) : null,
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    penName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
+                  Text(penName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   const SizedBox(height: 2),
-                  Text(
-                    name,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                  ),
+                  Text(name, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                   const SizedBox(height: 4),
                   Row(
                     children: [
@@ -244,16 +208,9 @@ class _AuthorTile extends StatelessWidget {
                         style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                       ),
                       const SizedBox(width: 12),
-                      Icon(
-                        Icons.auto_stories,
-                        size: 14,
-                        color: Colors.grey[400],
-                      ),
+                      Icon(Icons.auto_stories, size: 14, color: Colors.grey[400]),
                       const SizedBox(width: 4),
-                      Text(
-                        '$seriesCount series',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                      ),
+                      Text('$seriesCount series', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                     ],
                   ),
                 ],
@@ -264,20 +221,12 @@ class _AuthorTile extends StatelessWidget {
                 backgroundColor: Colors.grey[200],
                 foregroundColor: Colors.grey[700],
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 minimumSize: Size.zero,
               ),
               onPressed: onUnfollow,
-              child: const Text(
-                'Following',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              ),
+              child: const Text('Following', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
             ),
           ],
         ),

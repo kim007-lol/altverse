@@ -1,0 +1,42 @@
+{
+  "recommendations": [
+    // PHP & Laravel
+    "bmewburn.vscode-intelephense-client",
+    "amiralizadeh9480.laravel-extra-intellisense",
+    "onecentlin.laravel-blade",
+    "onecentlin.laravel5-snippets",
+    "ryannaddy.laravel-artisan",
+    
+    // Flutter & Dart
+    "dart-code.dart-code",
+    "dart-code.flutter",
+    
+    // Database
+    "cweijan.vscode-postgresql-client2",
+    "mtxr.sqltools",
+    
+    // Git
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+    
+    // Code Quality
+    "editorconfig.editorconfig",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    
+    // Utilities
+    "christian-kohler.path-intellisense",
+    "formulahendry.auto-rename-tag",
+    "streetsidesoftware.code-spell-checker",
+    "wayou.vscode-todo-highlight",
+    "gruntfuggly.todo-tree",
+    
+    // Markdown
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+    
+    // Theme (Optional)
+    "pkief.material-icon-theme",
+    "github.github-vscode-theme"
+  ]
+}

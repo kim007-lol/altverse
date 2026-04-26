@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/services/api_service.dart';
@@ -31,8 +30,8 @@ class _BadgesScreenState extends State<BadgesScreen> {
 
     try {
       final res = await ApiService.get(ApiEndpoints.badges);
-      if (res.statusCode == 200 && mounted) {
-        final body = jsonDecode(res.body);
+      if (res.success && mounted) {
+        final body = res.data;
         setState(() {
           _earnedBadges = body['earned'] ?? [];
           _isLoading = false;
@@ -50,12 +49,12 @@ class _BadgesScreenState extends State<BadgesScreen> {
     setState(() => _isPinning = true);
 
     try {
-      final res = await ApiService.post(ApiEndpoints.pinBadge(userBadgeId), {});
+      final res = await ApiService.post(ApiEndpoints.pinBadge(userBadgeId), body: {});
 
       if (!mounted) return;
 
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
+      if (res.success) {
+        final body = res.data;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(body['message'] ?? 'Berhasil mengubah pin'),
@@ -64,7 +63,7 @@ class _BadgesScreenState extends State<BadgesScreen> {
         );
         _fetchBadges();
       } else {
-        final body = jsonDecode(res.body);
+        final body = res.data;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(body['message'] ?? 'Gagal mengubah pin'),

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Author;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\GenerateSignedUrlRequest;
+use App\Http\Requests\StorePageRequest;
 use App\Jobs\DeleteOldImageJob;
 use App\Models\Episode;
 use App\Models\Page;
@@ -14,36 +16,59 @@ use Illuminate\Support\Facades\Storage;
 class PageController extends Controller
 {
     /**
-     * Generate presigned URL for direct upload to R2/S3.
-     * Flutter akan upload langsung ke R2 tanpa melalui server Laravel.
+     * Get the underlying S3 client from the Storage disk.
      */
-    public function signedUrl(Request $request)
+    private function getS3Client(): \Aws\S3\S3Client
     {
-        $request->validate([
-            'filename' => 'required|string|max:255',
-            'type'     => 'required|string|in:image/jpeg,image/png,image/webp,image/gif',
+        // Create S3 client directly from config
+        return new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region' => config('filesystems.disks.s3.region'),
+            'endpoint' => config('filesystems.disks.s3.endpoint'),
+            'use_path_style_endpoint' => config('filesystems.disks.s3.use_path_style_endpoint'),
+            'credentials' => [
+                'key' => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
         ]);
+    }
+
+    /**
+     * Generate presigned URL for direct upload to R2/S3.
+     * Flutter uploads directly to R2 without going through Laravel.
+     */
+    public function signedUrl(GenerateSignedUrlRequest $request)
+    {
+        $validated = $request->validated();
 
         // Sanitize filename to prevent path traversal
-        $safeFilename = preg_replace('/[^a-zA-Z0-9._-]/', '', basename($request->filename));
-        $path = 'episodes/pages/' . uniqid() . '_' . $safeFilename;
+        $safeFilename = preg_replace('/[^a-zA-Z0-9._-]/', '', basename($validated['filename']));
+
+        // Route audio files to a separate directory
+        $isAudio = in_array($validated['type'], ['audio/mpeg', 'audio/mp3', 'audio/mpeg3']);
+        $prefix = $isAudio ? 'episodes/music/' : 'episodes/pages/';
+        $path = $prefix . uniqid() . '_' . $safeFilename;
+
+        $client = $this->getS3Client();
+        $bucket = config('filesystems.disks.s3.bucket');
 
         // Generate presigned PUT URL (5 minutes)
-        $command = Storage::disk('s3')->getClient()->getCommand('PutObject', [
-            'Bucket' => config('filesystems.disks.s3.bucket'),
+        $command = $client->getCommand('PutObject', [
+            'Bucket' => $bucket,
             'Key'    => $path,
-            'ContentType' => $request->type,
+            'ContentType' => $validated['type'],
         ]);
 
-        $signedUrl = (string) Storage::disk('s3')
-            ->getClient()
-            ->createPresignedRequest($command, '+5 minutes')
-            ->getUri();
+        $presignedRequest = $client->createPresignedRequest($command, '+5 minutes');
+        $signedUrl = (string) $presignedRequest->getUri();
+
+        // Generate public URL using AWS_URL (R2 public domain)
+        $publicUrl = rtrim(config('filesystems.disks.s3.url'), '/') . '/' . $path;
 
         return response()->json([
             'upload_url' => $signedUrl,
             'path'       => $path,
-            'public_url' => config('filesystems.disks.s3.url') . '/' . $path,
+            'public_url' => $publicUrl,
         ]);
     }
 
@@ -64,17 +89,9 @@ class PageController extends Controller
      * Save page metadata after Flutter has uploaded the image to R2.
      * POST /api/v1/author/episodes/{episode}/pages
      */
-    public function store(Request $request, Episode $episode)
+    public function store(StorePageRequest $request, Episode $episode)
     {
-        $series = $episode->series;
-        abort_if($series->author_id !== $request->user()->id, 403);
-
-        $request->validate([
-            'image_path' => 'required|string',
-            'width'      => 'nullable|integer',
-            'height'     => 'nullable|integer',
-            'file_size'  => 'nullable|integer',
-        ]);
+        $validated = $request->validated();
 
         // Guardrail: max 100 pages per episode
         abort_if($episode->pages()->count() >= 100, 422, 'Maksimal 100 halaman per episode.');
@@ -83,11 +100,11 @@ class PageController extends Controller
 
         $page = Page::create([
             'episode_id' => $episode->id,
-            'image_path' => $request->image_path,
+            'image_path' => $validated['image_path'],
             'page_order' => $nextOrder,
-            'width'      => $request->width,
-            'height'     => $request->height,
-            'file_size'  => $request->file_size,
+            'width'      => $validated['width'] ?? null,
+            'height'     => $validated['height'] ?? null,
+            'file_size'  => $validated['file_size'] ?? null,
         ]);
 
         // Invalidate cache

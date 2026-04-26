@@ -151,20 +151,18 @@ class _RoleChoiceScreenState extends State<RoleChoiceScreen>
                         ? _continue
                         : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primaryColor,
-                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                       elevation: 0,
                     ),
                     child: _isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: theme.scaffoldBackgroundColor,
                             ),
                           )
                         : const Text(
@@ -212,7 +210,7 @@ class _RoleCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: isSelected ? color.withAlpha(15) : Colors.grey[50],
+          color: isSelected ? color.withAlpha(15) : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: isSelected ? color : Colors.grey.withAlpha(30),
@@ -239,7 +237,7 @@ class _RoleCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: isSelected ? color : Colors.grey[800],
+                      color: isSelected ? color : Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                   ),
                   const SizedBox(height: 4),

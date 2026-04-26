@@ -172,7 +172,7 @@ class _AuthorOnboardingScreenState extends State<AuthorOnboardingScreen> {
                       color: Colors.amber[700],
                     ),
                     filled: true,
-                    fillColor: Colors.grey[50],
+                    fillColor: Theme.of(context).cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
@@ -221,7 +221,7 @@ class _AuthorOnboardingScreenState extends State<AuthorOnboardingScreen> {
                     hintText: 'Ceritakan tentang dirimu sebagai author...',
                     hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                     filled: true,
-                    fillColor: Colors.grey[50],
+                    fillColor: Theme.of(context).cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,

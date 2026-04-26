@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/image_service.dart';
@@ -96,9 +95,9 @@ class _CreateSeriesScreenState extends State<CreateSeriesScreen> {
         files: files,
       );
 
-      final body = jsonDecode(response.body);
+      final body = response.data;
 
-      if (response.statusCode == 201) {
+      if (response.success) {
         final seriesId = body['id'];
         final seriesTitle = _titleCtrl.text.trim();
 
@@ -169,7 +168,7 @@ class _CreateSeriesScreenState extends State<CreateSeriesScreen> {
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                    icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
                     onPressed: widget.onBack ?? () => Navigator.pop(context),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -386,7 +385,7 @@ class _CreateSeriesScreenState extends State<CreateSeriesScreen> {
                   hintText: 'Tulis sinopsis cerita...',
                   hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: Theme.of(context).cardColor,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -400,7 +399,7 @@ class _CreateSeriesScreenState extends State<CreateSeriesScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey[50],
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
@@ -437,22 +436,19 @@ class _CreateSeriesScreenState extends State<CreateSeriesScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    disabledBackgroundColor: theme.primaryColor.withAlpha(100),
                   ),
                   onPressed: _isUploading ? null : _submit,
                   child: _isUploading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: theme.scaffoldBackgroundColor,
                             strokeWidth: 2,
                           ),
                         )
@@ -490,7 +486,7 @@ class _CreateSeriesScreenState extends State<CreateSeriesScreen> {
         hintText: hint,
         hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
         filled: true,
-        fillColor: Colors.grey[100],
+        fillColor: Theme.of(context).cardColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,

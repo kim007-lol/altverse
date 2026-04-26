@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_provider.dart';
@@ -43,8 +42,8 @@ class _MasterScreenState extends State<MasterScreen> {
   Future<void> _fetchCounts() async {
     try {
       final response = await ApiService.get(ApiEndpoints.authorSeriesCounts);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      if (response.success) {
+        final data = response.data;
         if (mounted) {
           setState(() {
             _draftCount = data['draft'] ?? 0;
@@ -193,7 +192,7 @@ class _MasterScreenState extends State<MasterScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey[900],
+                  color: theme.textTheme.bodyLarge?.color,
                 ),
               ),
               const SizedBox(height: 20),
@@ -230,21 +229,21 @@ class _MasterScreenState extends State<MasterScreen> {
                 icon: Icons.auto_awesome_rounded,
                 title: 'AU Builder',
                 subtitle: 'Chat-based stories (Coming Soon)',
-                color: Colors.deepPurple,
+                color: theme.primaryColor,
                 trailing: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.deepPurple.withAlpha(20),
+                    color: theme.primaryColor.withAlpha(20),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Soon',
                     style: TextStyle(
                       fontSize: 10,
-                      color: Colors.deepPurple,
+                      color: theme.primaryColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -459,7 +458,7 @@ class _BottomSheetOption extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.grey[200]!),
+            border: Border.all(color: Theme.of(context).dividerColor),
           ),
           child: Row(
             children: [
@@ -482,7 +481,7 @@ class _BottomSheetOption extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey[900],
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
                     const SizedBox(height: 2),

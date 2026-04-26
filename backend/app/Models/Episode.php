@@ -19,6 +19,8 @@ class Episode extends Model
         'status', // 'draft', 'scheduled', 'published'
         'scheduled_at',
         'published_at',
+        'music_path',
+        'music_title',
     ];
 
     protected function casts(): array

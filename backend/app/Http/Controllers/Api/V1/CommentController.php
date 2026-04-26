@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreCommentRequest;
 use App\Models\Comment;
 use App\Models\CommentLike;
 use App\Models\Episode;
@@ -72,13 +73,9 @@ class CommentController extends Controller
      *
      * XP: 5 XP per comment, max 50 XP/day (tracked in DB)
      */
-    public function store(Request $request, Episode $episode): JsonResponse
+    public function store(StoreCommentRequest $request, Episode $episode): JsonResponse
     {
-        $validated = $request->validate([
-            'body'      => 'required|string|min:10|max:2000',
-            'parent_id' => 'nullable|exists:comments,id',
-        ]);
-
+        $validated = $request->validated();
         $user = $request->user();
         $body = trim($validated['body']);
 
@@ -147,8 +144,13 @@ class CommentController extends Controller
             }
         ]);
 
-        // Automatically claim the post_comment mission for XP
-        app(\App\Services\MissionService::class)->autoClaimMission($user, 'post_comment');
+        // Award XP and track mission progress
+        XpService::award($user->id, 'comment');
+        $missionService = app(\App\Services\MissionService::class);
+        $missionService->autoTrack($user, 'comment');
+
+        // Check for "first_comment" badge
+        \App\Services\BadgeService::checkFirstCommentBadge($user);
 
         // Notify author
         $series = $episode->series;

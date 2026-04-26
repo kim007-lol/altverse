@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
@@ -49,15 +48,15 @@ class _CommentDrawerState extends State<CommentDrawer> {
       final endpoint =
           '${ApiEndpoints.episodeComments(widget.episodeId)}?sort=$_sort';
       final res = await ApiService.get(endpoint);
-      if (res.statusCode == 200) {
+      if (res.success) {
         if (mounted) {
           setState(() {
-            _comments = jsonDecode(res.body)['data'] ?? [];
+            _comments = res.data['data'] ?? [];
             _isLoading = false;
           });
         }
       } else {
-        debugPrint('Comment fetch error: ${res.statusCode} ${res.body}');
+        debugPrint('Comment fetch error: ${res.statusCode} ${res.message}');
         if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
@@ -73,16 +72,15 @@ class _CommentDrawerState extends State<CommentDrawer> {
     setState(() => _isSubmitting = true);
     try {
       final res = await ApiService.post(
-        ApiEndpoints.episodeComments(widget.episodeId),
-        {'body': text},
+        ApiEndpoints.episodeComments(widget.episodeId), body: {'body': text},
       );
 
-      if (res.statusCode == 201) {
+      if (res.success) {
         _commentController.clear();
         _fetchComments();
       } else {
         final error =
-            jsonDecode(res.body)['message'] ?? 'Failed to post comment';
+            res.data['message'] ?? 'Failed to post comment';
         if (mounted) {
           ScaffoldMessenger.of(
             context,
@@ -115,10 +113,9 @@ class _CommentDrawerState extends State<CommentDrawer> {
 
     try {
       final res = await ApiService.post(
-        ApiEndpoints.commentLike(commentId),
-        {},
+        ApiEndpoints.commentLike(commentId), body: {},
       );
-      if (res.statusCode != 200) {
+      if (!res.success) {
         // Revert
         setState(() {
           comment['is_liked'] = isLiked;
@@ -126,7 +123,7 @@ class _CommentDrawerState extends State<CommentDrawer> {
               (comment['likes_count'] ?? 0) + (isLiked ? 1 : -1);
         });
         if (mounted) {
-          final err = jsonDecode(res.body)['message'] ?? 'Error toggling like';
+          final err = res.data['message'] ?? 'Error toggling like';
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(err)));

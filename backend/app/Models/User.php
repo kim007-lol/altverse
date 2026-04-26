@@ -23,6 +23,7 @@ class User extends Authenticatable
         'social_links',
         'author_social_links',
         'theme_preference',
+        'theme_color',
     ];
 
     /**
@@ -106,6 +107,18 @@ class User extends Authenticatable
         return $this->hasMany(ReadingHistory::class);
     }
 
+    /** Reading history (alias for compatibility) */
+    public function readingHistory()
+    {
+        return $this->hasMany(ReadingHistory::class);
+    }
+
+    /** Comments */
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
     /** Collections / Playlists */
     public function collections()
     {
@@ -122,6 +135,20 @@ class User extends Authenticatable
     public function badges()
     {
         return $this->belongsToMany(Badge::class, 'badge_user')->withPivot('earned_at');
+    }
+
+    /** Missions with progress */
+    public function missions()
+    {
+        return $this->belongsToMany(Mission::class, 'user_missions')
+            ->withPivot('progress', 'completed_at', 'claimed_at')
+            ->withTimestamps();
+    }
+
+    /** User mission records */
+    public function userMissions()
+    {
+        return $this->hasMany(UserMission::class);
     }
 
     /** Genre preferences */
@@ -151,10 +178,9 @@ class User extends Authenticatable
             return true;
         }
 
-        // Author of the series always has access
-        if ($episode->series->author_id === $this->id) {
-            return true;
-        }
+        // No author bypass — since the app uses role-switching (same user_id),
+        // authors must also unlock their own premium episodes with coins
+        // to prevent economic loopholes.
 
         // Individual unlock
         return $this->unlockedEpisodes()

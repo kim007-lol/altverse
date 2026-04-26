@@ -12,7 +12,7 @@ class AuBuilderPlaceholderScreen extends StatelessWidget {
         title: const Text('AU Builder'),
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
-        foregroundColor: Colors.grey[900],
+        foregroundColor: Theme.of(context).textTheme.bodyLarge?.color,
       ),
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Center(
@@ -43,7 +43,7 @@ class AuBuilderPlaceholderScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey[900],
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
               ),
               const SizedBox(height: 12),

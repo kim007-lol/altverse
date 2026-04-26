@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
@@ -38,9 +37,9 @@ class _SeriesManagementScreenState extends State<SeriesManagementScreen>
     setState(() => _isLoading = true);
     try {
       final response = await ApiService.get(ApiEndpoints.authorSeries);
-      if (response.statusCode == 200) {
+      if (response.success) {
         setState(() {
-          _allSeries = jsonDecode(response.body) ?? [];
+          _allSeries = response.data ?? [];
           _isLoading = false;
         });
       } else {
@@ -73,10 +72,9 @@ class _SeriesManagementScreenState extends State<SeriesManagementScreen>
   Future<void> _changeSeriesStatus(int id, String newStatus) async {
     try {
       final response = await ApiService.put(
-        '${ApiEndpoints.authorSeries}/$id',
-        {'status': newStatus},
+        '${ApiEndpoints.authorSeries}/$id', body: {'status': newStatus},
       );
-      if (response.statusCode == 200) {
+      if (response.success) {
         _fetchSeries();
       } else {
         if (mounted) {
@@ -115,7 +113,7 @@ class _SeriesManagementScreenState extends State<SeriesManagementScreen>
         final response = await ApiService.delete(
           '${ApiEndpoints.authorSeries}/$id',
         );
-        if (response.statusCode == 200 || response.statusCode == 204) {
+        if (response.success || response.statusCode == 204) {
           _fetchSeries();
         }
       } catch (_) {}
@@ -147,7 +145,7 @@ class _SeriesManagementScreenState extends State<SeriesManagementScreen>
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey[900],
+                      color: theme.textTheme.bodyLarge?.color,
                     ),
                   ),
                   const Spacer(),
@@ -182,7 +180,7 @@ class _SeriesManagementScreenState extends State<SeriesManagementScreen>
                         )
                       : null,
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: theme.cardColor,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
@@ -200,7 +198,7 @@ class _SeriesManagementScreenState extends State<SeriesManagementScreen>
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: TabBar(

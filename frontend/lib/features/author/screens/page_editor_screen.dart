@@ -1,5 +1,7 @@
-import 'dart:convert';
+// page_editor_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/image_service.dart';
 import '../../../core/constants/api_endpoints.dart';
@@ -8,11 +10,7 @@ class PageEditorScreen extends StatefulWidget {
   final int episodeId;
   final String episodeTitle;
 
-  const PageEditorScreen({
-    super.key,
-    required this.episodeId,
-    required this.episodeTitle,
-  });
+  const PageEditorScreen({super.key, required this.episodeId, required this.episodeTitle});
 
   @override
   State<PageEditorScreen> createState() => _PageEditorScreenState();
@@ -24,20 +22,31 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
   bool _isUploading = false;
   String? _errorMessage;
 
+  // Music state
+  String? _existingMusicPath;
+  String? _existingMusicTitle;
+  final TextEditingController _musicTitleCtrl = TextEditingController();
+  bool _isUploadingMusic = false;
+
   @override
   void initState() {
     super.initState();
     _fetchPages();
+    _fetchEpisodeData();
+  }
+
+  @override
+  void dispose() {
+    _musicTitleCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchPages() async {
     setState(() => _isLoading = true);
     try {
-      final response = await ApiService.get(
-        ApiEndpoints.authorPages(widget.episodeId),
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      final response = await ApiService.get(ApiEndpoints.authorPages(widget.episodeId));
+      if (response.success) {
+        final data = response.data;
         if (data is List) {
           setState(() {
             _pages.clear();
@@ -73,10 +82,7 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
     if (remaining <= 0) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Maksimal 100 halaman per episode'),
-            backgroundColor: Colors.orange,
-          ),
+          const SnackBar(content: Text('Maksimal 100 halaman per episode'), backgroundColor: Colors.orange),
         );
       }
       return;
@@ -90,41 +96,54 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
     setState(() => _isUploading = true);
 
     int successCount = 0;
+    int failCount = 0;
+
     for (final file in files) {
       try {
         final fileName = file.path.split('/').last.split('\\').last;
         final ext = fileName.split('.').last.toLowerCase();
         final contentType = ext == 'png' ? 'image/png' : 'image/jpeg';
 
+        debugPrint('📤 Uploading: $fileName ($contentType)');
+
         // 1. Request presigned URL from backend
         final signedResponse = await ApiService.post(
           ApiEndpoints.authorSignedUrl,
-          {'filename': fileName, 'type': contentType},
+          body: {'filename': fileName, 'type': contentType},
         );
 
-        if (signedResponse.statusCode != 200) continue;
+        if (!signedResponse.success) {
+          debugPrint('❌ Failed to get signed URL: ${signedResponse.message}');
+          failCount++;
+          continue;
+        }
 
-        final signedData = jsonDecode(signedResponse.body);
+        final signedData = signedResponse.data;
         final uploadUrl = signedData['upload_url'] as String;
         final path = signedData['path'] as String;
         final publicUrl = signedData['public_url'] as String;
 
+        debugPrint('✅ Got signed URL for: $path');
+
         // 2. Upload directly to R2
-        final uploaded = await ApiService.uploadToR2(
-          uploadUrl,
-          file,
-          contentType,
-        );
-        if (!uploaded) continue;
+        final uploadResult = await ApiService.uploadToR2(uploadUrl, file, contentType: contentType);
+
+        if (!uploadResult.success) {
+          debugPrint('❌ Failed to upload to R2: ${uploadResult.message}');
+          failCount++;
+          continue;
+        }
+
+        debugPrint('✅ Uploaded to R2: $path');
 
         // 3. Save page metadata to backend
         final pageResponse = await ApiService.post(
           ApiEndpoints.authorPages(widget.episodeId),
-          {'image_path': path, 'file_size': file.lengthSync()},
+          body: {'image_path': path, 'file_size': file.lengthSync()},
         );
 
-        if (pageResponse.statusCode == 201) {
-          final pageData = jsonDecode(pageResponse.body);
+        if (pageResponse.success) {
+          final pageData = pageResponse.data;
           final page = pageData['page'];
           setState(() {
             _pages.add(
@@ -138,21 +157,30 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
             );
           });
           successCount++;
+          debugPrint('✅ Page metadata saved: ${page['id']}');
+        } else {
+          debugPrint('❌ Failed to save metadata: ${pageResponse.message}');
+          failCount++;
         }
       } catch (e) {
-        debugPrint('Upload error: $e');
+        debugPrint('❌ Upload error: $e');
+        failCount++;
       }
     }
 
     setState(() => _isUploading = false);
 
     if (mounted) {
+      final total = successCount + failCount;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '$successCount/${files.length} halaman berhasil diupload ke R2',
+            successCount > 0
+                ? '$successCount/$total halaman berhasil diupload ke R2'
+                : 'Gagal upload halaman. Periksa koneksi dan coba lagi.',
           ),
           backgroundColor: successCount > 0 ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 3),
         ),
       );
     }
@@ -168,10 +196,7 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
         title: const Text('Hapus Halaman?'),
         content: const Text('Halaman ini akan dihapus permanen dari R2.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
@@ -183,10 +208,8 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
     if (confirmed != true) return;
 
     try {
-      final response = await ApiService.delete(
-        ApiEndpoints.authorPageDelete(page.id!),
-      );
-      if (response.statusCode == 200) {
+      final response = await ApiService.delete(ApiEndpoints.authorPageDelete(page.id!));
+      if (response.success) {
         setState(() => _pages.removeAt(index));
       }
     } catch (_) {}
@@ -200,41 +223,29 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Page Editor',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Colors.black87,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: theme.textTheme.titleLarge?.color),
             ),
             Text(
               widget.episodeTitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.normal,
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey[400], fontWeight: FontWeight.normal),
             ),
           ],
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         actions: [
           if (_isUploading)
             const Padding(
               padding: EdgeInsets.all(16),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
             )
           else ...[
             IconButton(
@@ -254,15 +265,9 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
                 children: [
                   Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
                   const SizedBox(height: 16),
-                  Text(
-                    _errorMessage!,
-                    style: TextStyle(color: Colors.grey[700]),
-                  ),
+                  Text(_errorMessage!, style: TextStyle(color: Colors.grey[700])),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _fetchPages,
-                    child: const Text('Coba Lagi'),
-                  ),
+                  ElevatedButton(onPressed: _fetchPages, child: const Text('Coba Lagi')),
                 ],
               ),
             )
@@ -284,10 +289,7 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
                     onPressed: _addPages,
                     icon: const Icon(Icons.add),
                     label: const Text('Upload Halaman'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primaryColor,
-                      foregroundColor: Colors.white,
-                    ),
+                    style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor, foregroundColor: Colors.white),
                   ),
                 ],
               ),
@@ -301,9 +303,7 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
                 return Card(
                   key: ValueKey('page_${page.id ?? i}'),
                   margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: ListTile(
                     leading: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
@@ -322,10 +322,7 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
                     ),
                     title: Text(
                       'Halaman ${page.pageOrder}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                     subtitle: Text(
                       ImageService.formatFileSize(page.fileSize),
@@ -334,17 +331,9 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.drag_handle,
-                          color: Colors.grey[400],
-                          size: 20,
-                        ),
+                        Icon(Icons.drag_handle, color: Colors.grey[400], size: 20),
                         IconButton(
-                          icon: Icon(
-                            Icons.delete_outline,
-                            size: 18,
-                            color: Colors.red[400],
-                          ),
+                          icon: Icon(Icons.delete_outline, size: 18, color: Colors.red[400]),
                           onPressed: () => _deletePage(i),
                         ),
                       ],
@@ -356,30 +345,29 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.check_circle_outline),
-            label: const Text(
-              'Selesai & Simpan',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Halaman berhasil disimpan!'),
-                  backgroundColor: Colors.green,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ─── Music Upload Section ───
+              _buildMusicSection(theme),
+              const SizedBox(height: 12),
+              // ─── Save Button ───
+              ElevatedButton.icon(
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('Selesai & Simpan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
                 ),
-              );
-              Navigator.pop(context);
-            },
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Halaman berhasil disimpan!'), backgroundColor: Colors.green),
+                  );
+                  Navigator.pop(context);
+                },
+              ),
+            ],
           ),
         ),
       ),
@@ -404,12 +392,234 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
 
   Future<void> _syncReorder() async {
     try {
-      await ApiService.patch(ApiEndpoints.authorPageReorder(widget.episodeId), {
-        'pages': _pages.map((p) => {'id': p.id, 'order': p.pageOrder}).toList(),
-      });
+      await ApiService.patch(
+        ApiEndpoints.authorPageReorder(widget.episodeId),
+        body: {
+          'pages': _pages.map((p) => {'id': p.id, 'order': p.pageOrder}).toList(),
+        },
+      );
     } catch (e) {
       debugPrint('Reorder sync error: $e');
     }
+  }
+
+  // ─── Music Methods ───
+
+  Future<void> _fetchEpisodeData() async {
+    try {
+      final response = await ApiService.get(ApiEndpoints.authorEpisodeUpdate(widget.episodeId));
+      if (response.success && response.data != null) {
+        final ep = response.data;
+        if (mounted) {
+          setState(() {
+            _existingMusicPath = ep['music_path'];
+            _existingMusicTitle = ep['music_title'];
+            _musicTitleCtrl.text = _existingMusicTitle ?? '';
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _uploadMusic() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['mp3']);
+    if (result == null || result.files.isEmpty) return;
+
+    final pickedFile = result.files.first;
+    if (pickedFile.path == null) return;
+
+    final file = File(pickedFile.path!);
+    final fileSize = file.lengthSync();
+
+    // Check 10MB limit
+    if (fileSize > 10 * 1024 * 1024) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('File terlalu besar. Maksimal 10MB.'), backgroundColor: Colors.red),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isUploadingMusic = true);
+
+    try {
+      final fileName = pickedFile.name;
+
+      debugPrint('🎵 Uploading music: $fileName');
+
+      // 1. Get presigned URL
+      final signedResponse = await ApiService.post(
+        ApiEndpoints.authorSignedUrl,
+        body: {'filename': fileName, 'type': 'audio/mpeg'},
+      );
+      if (!signedResponse.success) {
+        throw Exception('Failed to get signed URL: ${signedResponse.message}');
+      }
+
+      final signedData = signedResponse.data;
+      final uploadUrl = signedData['upload_url'] as String;
+      final path = signedData['path'] as String;
+
+      debugPrint('✅ Got signed URL for music: $path');
+
+      // 2. Upload to R2
+      final uploadResult = await ApiService.uploadToR2(uploadUrl, file, contentType: 'audio/mpeg');
+      if (!uploadResult.success) {
+        throw Exception('Failed to upload to R2: ${uploadResult.message}');
+      }
+
+      debugPrint('✅ Music uploaded to R2: $path');
+
+      // 3. Update episode with music metadata
+      final title = _musicTitleCtrl.text.isNotEmpty ? _musicTitleCtrl.text : fileName.replaceAll('.mp3', '');
+
+      final updateResponse = await ApiService.patch(
+        ApiEndpoints.authorEpisodeUpdate(widget.episodeId),
+        body: {'music_path': path, 'music_title': title},
+      );
+
+      if (updateResponse.success) {
+        setState(() {
+          _existingMusicPath = path;
+          _existingMusicTitle = title;
+          _musicTitleCtrl.text = title;
+        });
+
+        debugPrint('✅ Music metadata saved');
+
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Musik berhasil diupload! 🎵'), backgroundColor: Colors.green));
+        }
+      } else {
+        throw Exception('Failed to save metadata: ${updateResponse.message}');
+      }
+    } catch (e) {
+      debugPrint('❌ Music upload error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal upload musik: ${e.toString()}'), backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingMusic = false);
+    }
+  }
+
+  Future<void> _deleteMusic() async {
+    try {
+      final response = await ApiService.patch(
+        ApiEndpoints.authorEpisodeUpdate(widget.episodeId),
+        body: {'music_path': null, 'music_title': null},
+      );
+      if (response.success) {
+        setState(() {
+          _existingMusicPath = null;
+          _existingMusicTitle = null;
+          _musicTitleCtrl.clear();
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Musik berhasil dihapus'), backgroundColor: Colors.orange));
+        }
+      }
+    } catch (_) {}
+  }
+
+  Widget _buildMusicSection(ThemeData theme) {
+    final hasMusic = _existingMusicPath != null && _existingMusicPath!.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withAlpha(30)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🎵 ', style: TextStyle(fontSize: 16)),
+              Text(
+                'Background Music',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: theme.textTheme.bodyLarge?.color),
+              ),
+              const Spacer(),
+              Text('Opsional', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (hasMusic) ...[
+            // Existing music display
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(color: Colors.green.withAlpha(20), borderRadius: BorderRadius.circular(8)),
+              child: Row(
+                children: [
+                  const Icon(Icons.audiotrack, size: 16, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _existingMusicTitle ?? 'Music',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _deleteMusic,
+                    child: Icon(Icons.delete_outline, size: 18, color: Colors.red[400]),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Title edit field
+            TextField(
+              controller: _musicTitleCtrl,
+              style: const TextStyle(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Judul musik (opsional)',
+                hintStyle: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.withAlpha(50)),
+                ),
+              ),
+              onSubmitted: (val) {
+                if (val.isNotEmpty) {
+                  ApiService.patch(ApiEndpoints.authorEpisodeUpdate(widget.episodeId), body: {'music_title': val});
+                }
+              },
+            ),
+          ] else ...[
+            // Upload button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _isUploadingMusic ? null : _uploadMusic,
+                icon: _isUploadingMusic
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.upload_file, size: 18),
+                label: Text(_isUploadingMusic ? 'Uploading...' : 'Upload MP3', style: const TextStyle(fontSize: 13)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text('Max 10MB, format .mp3', style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+          ],
+        ],
+      ),
+    );
   }
 }
 
@@ -421,13 +631,7 @@ class _PageItem {
   int pageOrder;
   int fileSize;
 
-  _PageItem({
-    this.id,
-    required this.imagePath,
-    required this.publicUrl,
-    required this.pageOrder,
-    this.fileSize = 0,
-  });
+  _PageItem({this.id, required this.imagePath, required this.publicUrl, required this.pageOrder, this.fileSize = 0});
 }
 
 // ─── Preview Screen (horizontal swipe) ───
@@ -473,8 +677,7 @@ class PreviewScreenState extends State<PreviewScreen> {
                       return Center(
                         child: CircularProgressIndicator(
                           value: progress.expectedTotalBytes != null
-                              ? progress.cumulativeBytesLoaded /
-                                    progress.expectedTotalBytes!
+                              ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
                               : null,
                           color: Colors.white54,
                         ),
@@ -483,16 +686,9 @@ class PreviewScreenState extends State<PreviewScreen> {
                     errorBuilder: (_, e, st) => Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
-                          Icons.broken_image,
-                          color: Colors.white54,
-                          size: 48,
-                        ),
+                        const Icon(Icons.broken_image, color: Colors.white54, size: 48),
                         const SizedBox(height: 8),
-                        Text(
-                          'Gagal memuat gambar',
-                          style: TextStyle(color: Colors.grey[500]),
-                        ),
+                        Text('Gagal memuat gambar', style: TextStyle(color: Colors.grey[500])),
                       ],
                     ),
                   ),
@@ -507,10 +703,7 @@ class PreviewScreenState extends State<PreviewScreen> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.orange.withAlpha(180),
                     borderRadius: BorderRadius.circular(20),
@@ -545,21 +738,11 @@ class PreviewScreenState extends State<PreviewScreen> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
                   child: Text(
                     '${_currentPage + 1} / ${widget.pages.length}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

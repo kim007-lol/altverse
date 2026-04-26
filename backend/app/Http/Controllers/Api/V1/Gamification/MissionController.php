@@ -17,30 +17,25 @@ class MissionController extends Controller
     }
 
     /**
-     * Get all active missions along with progress.
+     * Get all active missions along with user progress.
      */
     public function index(Request $request): JsonResponse
     {
-        $missions = $this->missionService->getMissions($request->user());
+        $missions = $this->missionService->getUserMissions($request->user());
 
         return response()->json([
+            'success' => true,
             'missions' => $missions
         ]);
     }
 
     /**
-     * Claim a specific mission.
+     * Claim a mission reward.
      */
-    public function claim(Request $request, string $code): JsonResponse
+    public function claim(Request $request, int $missionId): JsonResponse
     {
-        $result = $this->missionService->claimMission($request->user(), $code);
+        $result = $this->missionService->claimReward($request->user(), $missionId);
 
-        $statusCode = $result['code'] ?? 200;
-        unset($result['code']);
-
-        return response()->json(
-            $result,
-            $statusCode
-        );
+        return response()->json($result, $result['success'] ? 200 : 400);
     }
 }

@@ -3,12 +3,18 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routing/app_router.dart';
 import 'core/services/auth_provider.dart';
+import 'features/gamification/providers/mission_provider.dart';
+import 'features/shared/providers/notification_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AuthProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => MissionProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -19,13 +25,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'AU Reader',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light,
-      routerConfig: AppRouter.router,
+    return Consumer<AuthProvider>(
+      builder: (context, auth, _) {
+        return MaterialApp.router(
+          title: 'AU Reader',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.buildLightTheme(auth.primaryColor),
+          darkTheme: AppTheme.buildDarkTheme(auth.primaryColor),
+          themeMode: auth.themeMode,
+          routerConfig: AppRouter.router,
+        );
+      },
     );
   }
 }

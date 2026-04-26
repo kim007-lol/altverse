@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
@@ -23,10 +22,10 @@ class _TierBenefitScreenState extends State<TierBenefitScreen> {
   Future<void> _fetch() async {
     try {
       final res = await ApiService.get(ApiEndpoints.tierProgress);
-      if (res.statusCode == 200) {
+      if (res.success) {
         if (mounted) {
           setState(() {
-            _data = jsonDecode(res.body);
+            _data = res.data;
             _isLoading = false;
           });
         }
@@ -96,7 +95,7 @@ class _TierBenefitScreenState extends State<TierBenefitScreen> {
   ) {
     final emoji = _tierEmoji(tier);
     final name = _capitalize(tier);
-    final color = _tierColor(tier);
+    final color = _tierColor(tier, theme);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -197,7 +196,7 @@ class _TierBenefitScreenState extends State<TierBenefitScreen> {
       final isCurrent = tier == currentTier;
       final emoji = _tierEmoji(tier);
       final name = _capitalize(tier);
-      final color = _tierColor(tier);
+      final color = _tierColor(tier, theme);
       final benefits = List<String>.from(allBenefits[tier] ?? []);
       final tierProgress = progress[tier] as Map<String, dynamic>?;
 
@@ -364,8 +363,8 @@ class _TierBenefitScreenState extends State<TierBenefitScreen> {
     _ => '🥉',
   };
 
-  Color _tierColor(String tier) => switch (tier) {
-    'popular' => Colors.purple,
+  Color _tierColor(String tier, ThemeData theme) => switch (tier) {
+    'popular' => theme.primaryColor,
     'gold' => Colors.amber,
     'silver' => Colors.blueGrey,
     _ => Colors.brown,

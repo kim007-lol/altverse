@@ -33,6 +33,14 @@ class BookmarkController extends Controller
         }
 
         $user->bookmarks()->attach($series->id);
+        
+        // Track mission progress for bookmark
+        $missionService = app(\App\Services\MissionService::class);
+        $missionService->autoTrack($user, 'bookmark');
+        
+        // Check for "first_bookmark" badge
+        \App\Services\BadgeService::checkFirstBookmarkBadge($user);
+        
         return response()->json(['message' => 'Bookmark ditambahkan', 'bookmarked' => true]);
     }
 

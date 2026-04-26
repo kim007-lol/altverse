@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SendTipRequest;
 use App\Models\Badge;
 use App\Models\Notification;
 use App\Models\Transaction;
@@ -58,17 +59,6 @@ class WalletController extends Controller
         }
 
         $rewardXp = $streak * 10;
-        $rewardCoins = 0;
-
-        if ($streak === 7) {
-            $hasReceivedCoinBonus = Transaction::where('user_id', $user->id)
-                ->where('type', 'daily_coin_bonus')
-                ->exists();
-
-            if (!$hasReceivedCoinBonus) {
-                $rewardCoins = 10;
-            }
-        }
 
         // Record XP
         $xpRecord = \App\Models\UserXp::firstOrCreate(
@@ -91,38 +81,25 @@ class WalletController extends Controller
             Cache::forget("leaderboard:xp:{$season->id}");
         }
 
-        // Conditionally grant coins
-        if ($rewardCoins > 0) {
-            $user->increment('coins', $rewardCoins);
-            Transaction::create([
-                'user_id'     => $user->id,
-                'type'        => 'daily_reward',
-                'amount'      => $rewardCoins, // only logging the coin transaction amount
-                'description' => "Daily reward hari ke-7 (+10 koin, +70 XP)",
-            ]);
-        } else {
-            Transaction::create([
-                'user_id'     => $user->id,
-                'type'        => 'daily_reward',
-                'amount'      => 0, // 0 coins
-                'description' => "Daily reward hari ke-{$streak} (+{$rewardXp} XP)",
-            ]);
-        }
+        Transaction::create([
+            'user_id'     => $user->id,
+            'type'        => 'daily_reward',
+            'amount'      => 0, // 0 coins
+            'description' => "Daily reward hari ke-{$streak} (+{$rewardXp} XP)",
+        ]);
 
         Notification::create([
             'id'      => Str::uuid(),
             'user_id' => $user->id,
             'type'    => 'daily_reward',
             'title'   => 'Reward Harian Diklaim!',
-            'body'    => $rewardCoins > 0
-                ? "Selamat! Streak hari ke-7 memberikan {$rewardCoins} koin & {$rewardXp} XP"
-                : "Kamu mendapat {$rewardXp} XP (streak: {$streak} hari)",
+            'body'    => "Kamu mendapat {$rewardXp} XP (streak: {$streak} hari)",
         ]);
 
         return response()->json([
             'message'      => 'Daily reward berhasil diklaim!',
             'xp_earned'    => $rewardXp,
-            'coins_earned' => $rewardCoins,
+            'coins_earned' => 0,
             'streak'       => $streak,
             'total_xp'     => $xpRecord->fresh()->total_xp,
             'total_coins'  => $user->fresh()->coins,
@@ -135,13 +112,9 @@ class WalletController extends Controller
      * FIX #10: Rate limited to max 20 tips per day per user
      * REFACTOR: Tips no longer award XP — only tracked for leaderboard spending.
      */
-    public function sendTip(Request $request): JsonResponse
+    public function sendTip(SendTipRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'author_id' => 'required|exists:users,id',
-            'amount'    => 'required|integer|min:1|max:10000',
-            'series_id' => 'nullable|exists:series,id',
-        ]);
+        $validated = $request->validated();
 
         $user = $request->user();
 
@@ -220,6 +193,13 @@ class WalletController extends Controller
         // Track spending for Top Supporter & Top Author leaderboards (NO XP)
         XpService::trackSeasonSpending($user->id, (int) $validated['author_id'], $validated['amount']);
 
+        // Check spend badges
+        \App\Services\BadgeService::checkAndAwardBadges($user);
+
+        // Track mission progress for spending coins
+        $missionService = app(\App\Services\MissionService::class);
+        $missionService->autoTrack($user, 'spend_coins');
+
         return response()->json([
             'message'     => 'Tip berhasil dikirim!',
             'amount'      => $validated['amount'],
@@ -278,11 +258,7 @@ class WalletController extends Controller
         $streakValue = $streak + ($claimedToday ? 0 : 1);
         $nextRewardXp = $streakValue * 10;
 
-        $hasReceivedCoinBonus = Transaction::where('user_id', $user->id)
-            ->where('type', 'daily_coin_bonus')
-            ->exists();
-
-        $nextRewardCoins = ($streakValue === 7 && !$hasReceivedCoinBonus) ? 10 : 0;
+        $nextRewardCoins = 0;
 
         $weekDays = [];
         for ($i = 6; $i >= 0; $i--) {
@@ -299,7 +275,7 @@ class WalletController extends Controller
             'claimed_today'           => $claimedToday,
             'next_reward_xp'          => $nextRewardXp,
             'next_reward_coins'       => $nextRewardCoins,
-            'has_received_coin_bonus' => $hasReceivedCoinBonus,
+            'has_received_coin_bonus' => true, // Legacy field, no longer used
             'total_xp'                => $user->xpRecord ? $user->xpRecord->total_xp : 0,
             'coins'                   => $user->coins,
             'week_days'               => $weekDays,

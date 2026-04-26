@@ -1,0 +1,7 @@
+{
+  "title": "Test Series API",
+  "synopsis": "This is a test series created via API testing",
+  "genre": "Fantasy",
+  "age_rating": "all",
+  "status": "draft"
+}

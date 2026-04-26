@@ -10,7 +10,11 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/services/auth_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
+import '../../../core/theme/app_theme.dart';
 import 'my_comments_screen.dart';
+import 'theme_color_screen.dart';
+import 'badge_collection_screen.dart';
+import 'wallet_screen.dart';
 
 class ReaderProfileScreen extends StatefulWidget {
   final int userId;
@@ -20,8 +24,7 @@ class ReaderProfileScreen extends StatefulWidget {
   State<ReaderProfileScreen> createState() => _ReaderProfileScreenState();
 }
 
-class _ReaderProfileScreenState extends State<ReaderProfileScreen>
-    with SingleTickerProviderStateMixin {
+class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   bool _hasError = false;
   Map<String, dynamic>? _data;
@@ -37,11 +40,9 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
 
   Future<void> _fetchProfile() async {
     try {
-      final res = await ApiService.get(
-        ApiEndpoints.readerProfilePublic(widget.userId),
-      );
-      if (res.statusCode == 200 && mounted) {
-        final body = jsonDecode(res.body);
+      final res = await ApiService.get(ApiEndpoints.readerProfilePublic(widget.userId));
+      if (res.success && mounted) {
+        final body = res.data;
         setState(() {
           _data = body;
           _isFollowing = body['is_following'] ?? false;
@@ -63,12 +64,9 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
     setState(() => _isFollowing = !was);
 
     try {
-      final res = await ApiService.post(
-        ApiEndpoints.followToggle(widget.userId),
-        {},
-      );
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
+      final res = await ApiService.post(ApiEndpoints.followToggle(widget.userId), body: {});
+      if (res.success) {
+        final data = res.data;
         if (mounted) setState(() => _isFollowing = data['following'] ?? !was);
       } else {
         if (mounted) setState(() => _isFollowing = was);
@@ -137,38 +135,22 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
 
     final igUrl = getUrl('instagram');
     if (igUrl.isNotEmpty) {
-      socialItems.add({
-        'icon': Icons.camera_alt_outlined,
-        'url': igUrl,
-        'label': 'IG',
-      });
+      socialItems.add({'icon': Icons.camera_alt_outlined, 'url': igUrl, 'label': 'IG'});
     }
 
     final tiktokUrl = getUrl('tiktok');
     if (tiktokUrl.isNotEmpty) {
-      socialItems.add({
-        'icon': Icons.music_note_outlined,
-        'url': tiktokUrl,
-        'label': 'TikTok',
-      });
+      socialItems.add({'icon': Icons.music_note_outlined, 'url': tiktokUrl, 'label': 'TikTok'});
     }
 
     final wattpadUrl = getUrl('wattpad');
     if (wattpadUrl.isNotEmpty) {
-      socialItems.add({
-        'icon': Icons.auto_stories_outlined,
-        'url': wattpadUrl,
-        'label': 'Wattpad',
-      });
+      socialItems.add({'icon': Icons.auto_stories_outlined, 'url': wattpadUrl, 'label': 'Wattpad'});
     }
 
     final twitterUrl = getUrl('twitter');
     if (twitterUrl.isNotEmpty) {
-      socialItems.add({
-        'icon': Icons.alternate_email,
-        'url': twitterUrl,
-        'label': 'X',
-      });
+      socialItems.add({'icon': Icons.alternate_email, 'url': twitterUrl, 'label': 'X'});
     }
 
     final webUrl = getUrl('website');
@@ -188,15 +170,11 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
             onTap: () {
               final url = item['url'].toString();
               if (url.isNotEmpty) {
-                final uri = Uri.parse(
-                  url.startsWith('http') ? url : 'https://$url',
-                );
-                launchUrl(uri, mode: LaunchMode.externalApplication).catchError(
-                  (e) {
-                    debugPrint('Gagal membuka URL: $e');
-                    return false;
-                  },
-                );
+                final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
+                launchUrl(uri, mode: LaunchMode.externalApplication).catchError((e) {
+                  debugPrint('Gagal membuka URL: $e');
+                  return false;
+                });
               }
             },
             child: Container(
@@ -208,19 +186,11 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    item['icon'] as IconData,
-                    size: 14,
-                    color: theme.primaryColor,
-                  ),
+                  Icon(item['icon'] as IconData, size: 14, color: theme.primaryColor),
                   const SizedBox(width: 4),
                   Text(
                     item['label'] as String,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: theme.primaryColor,
-                    ),
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: theme.primaryColor),
                   ),
                 ],
               ),
@@ -252,10 +222,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
               const SizedBox(height: 12),
               const Text('Gagal memuat profil'),
               const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: _fetchProfile,
-                child: const Text('Coba Lagi'),
-              ),
+              ElevatedButton(onPressed: _fetchProfile, child: const Text('Coba Lagi')),
             ],
           ),
         ),
@@ -276,9 +243,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
     final level = xp['level'] ?? 0;
     final currentXp = xp['current_xp'] ?? 0;
     final nextLevelXp = xp['next_level_xp'] ?? 100;
-    final xpProgress = nextLevelXp > 0
-        ? (currentXp / nextLevelXp).clamp(0.0, 1.0)
-        : 0.0;
+    final xpProgress = nextLevelXp > 0 ? (currentXp / nextLevelXp).clamp(0.0, 1.0) : 0.0;
 
     final followingCount = stats['following'] ?? 0;
     final unlockedCount = stats['unlocked'] ?? 0;
@@ -292,10 +257,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(
-          name,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
+        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
         elevation: 0,
         backgroundColor: theme.scaffoldBackgroundColor,
@@ -317,35 +279,16 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                     height: 104,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: supporterName != null
-                            ? supporterCol
-                            : Colors.grey.shade300,
-                        width: 3,
-                      ),
+                      border: Border.all(color: supporterName != null ? supporterCol : Colors.grey.shade300, width: 3),
                       boxShadow: supporterName != null
-                          ? [
-                              BoxShadow(
-                                color: supporterCol.withAlpha(60),
-                                blurRadius: 12,
-                                spreadRadius: 2,
-                              ),
-                            ]
+                          ? [BoxShadow(color: supporterCol.withAlpha(60), blurRadius: 12, spreadRadius: 2)]
                           : [],
                     ),
                     child: CircleAvatar(
                       radius: 52,
-                      backgroundColor: Colors.white,
-                      backgroundImage: avatarUrl.isNotEmpty
-                          ? CachedNetworkImageProvider(avatarUrl)
-                          : null,
-                      child: avatarUrl.isEmpty
-                          ? Icon(
-                              Icons.person,
-                              size: 52,
-                              color: Colors.grey[400],
-                            )
-                          : null,
+                      backgroundColor: theme.cardColor,
+                      backgroundImage: avatarUrl.isNotEmpty ? CachedNetworkImageProvider(avatarUrl) : null,
+                      child: avatarUrl.isEmpty ? Icon(Icons.person, size: 52, color: Colors.grey[400]) : null,
                     ),
                   ),
                   if (pinnedBadges.isNotEmpty)
@@ -354,15 +297,12 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                       child: Row(
                         children: pinnedBadges.take(2).map((b) {
                           return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 2.0,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 2.0),
                             child: CachedNetworkImage(
                               imageUrl: ApiService.getImageUrl(b['icon_url']),
                               width: 28,
                               height: 28,
-                              errorWidget: (context, url, error) =>
-                                  const SizedBox(),
+                              errorWidget: (context, url, error) => const SizedBox(),
                             ),
                           );
                         }).toList(),
@@ -385,11 +325,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                   ),
                 ),
                 const SizedBox(width: 8),
-                Icon(
-                  Icons.menu_book_rounded,
-                  size: 20,
-                  color: Colors.grey[600],
-                ),
+                Icon(Icons.menu_book_rounded, size: 20, color: Colors.grey[600]),
                 if (pinnedBadges.isNotEmpty) const SizedBox(width: 8),
                 ...pinnedBadges.take(2).map((b) {
                   return Padding(
@@ -407,10 +343,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
             if (handle.isNotEmpty && handle != name)
               Padding(
                 padding: const EdgeInsets.only(top: 4.0),
-                child: Text(
-                  handle,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
+                child: Text(handle, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
               ),
 
             // Bio
@@ -420,21 +353,14 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                 child: Text(
                   bio,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                    height: 1.4,
-                  ),
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600], height: 1.4),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
 
             // Social Links
-            if (socialLinks.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _buildSocialLinks(socialLinks, theme),
-            ],
+            if (socialLinks.isNotEmpty) ...[const SizedBox(height: 12), _buildSocialLinks(socialLinks, theme)],
 
             const SizedBox(height: 20),
 
@@ -445,15 +371,12 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                 if (_isSelf) ...[
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () =>
-                          _showEditProfileSheet(context, theme, user),
+                      onPressed: () => _showEditProfileSheet(context, theme, user),
                       icon: const Icon(Icons.edit_outlined, size: 18),
                       label: const Text('Edit Profile'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ),
@@ -462,45 +385,25 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                     onPressed: () async {
                       final url = 'https://aureader.com/u/${widget.userId}';
                       // ignore: deprecated_member_use
-                      await Share.share(
-                        'Check out my profile on AU Reader!\n$url',
-                        subject: 'AU Reader Profile',
-                      );
+                      await Share.share('Check out my profile on AU Reader!\n$url', subject: 'AU Reader Profile');
                     },
                     icon: const Icon(Icons.share_outlined, size: 18),
                     label: const Text('Share'),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ] else ...[
                   FilledButton.icon(
                     onPressed: _toggleFollow,
-                    icon: Icon(
-                      _isFollowing ? Icons.check : Icons.person_add,
-                      size: 18,
-                    ),
+                    icon: Icon(_isFollowing ? Icons.check : Icons.person_add, size: 18),
                     label: Text(_isFollowing ? 'Following' : 'Follow'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: _isFollowing
-                          ? Colors.grey[300]
-                          : theme.primaryColor,
-                      foregroundColor: _isFollowing
-                          ? Colors.grey[700]
-                          : Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      backgroundColor: _isFollowing ? Colors.grey[300] : theme.primaryColor,
+                      foregroundColor: _isFollowing ? Colors.grey[700] : theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ],
@@ -519,10 +422,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                 children: [
                   _buildStatColumn('Following', _formatCount(followingCount)),
                   _buildStatDivider(),
-                  _buildStatColumn(
-                    'Bookmarks',
-                    _formatCount(stats['bookmarks'] ?? 0),
-                  ),
+                  _buildStatColumn('Bookmarks', _formatCount(stats['bookmarks'] ?? 0)),
                   _buildStatDivider(),
                   _buildStatColumn('Unlocked', _formatCount(unlockedCount)),
                 ],
@@ -539,15 +439,9 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
               child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: theme.cardColor,
+                  color: Colors.grey.withAlpha(25),
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(5),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 4))],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -557,27 +451,14 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                       children: [
                         Row(
                           children: [
-                            Icon(
-                              Icons.stars_rounded,
-                              color: theme.primaryColor,
-                            ),
+                            Icon(Icons.stars_rounded, color: theme.primaryColor),
                             const SizedBox(width: 8),
-                            const Text(
-                              'XP Progress',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
+                            const Text('XP Progress', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           ],
                         ),
                         Text(
                           'Level $level',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: theme.primaryColor,
-                            fontSize: 16,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.w800, color: theme.primaryColor, fontSize: 16),
                         ),
                       ],
                     ),
@@ -597,11 +478,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                       children: [
                         Text(
                           '$currentXp / $nextLevelXp XP',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[500],
-                          ),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[500]),
                         ),
                       ],
                     ),
@@ -613,6 +490,64 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
             const SizedBox(height: 24),
 
             // ═══════════════════════════════════════════════════
+            // ACHIEVEMENTS (Badges)
+            // ═══════════════════════════════════════════════════
+            if (badges.isNotEmpty) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Achievements', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 80,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  itemCount: badges.length,
+                  itemBuilder: (context, i) {
+                    final badge = badges[i];
+                    final bColor = AppTheme.getColorFromHex(badge['color']);
+                    return GestureDetector(
+                      onTap: () => _showBadgeDetail(context, badge),
+                      child: Container(
+                        width: 70,
+                        margin: const EdgeInsets.only(right: 12),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: bColor.withAlpha(25),
+                                border: Border.all(color: bColor.withAlpha(120)),
+                              ),
+                              child: Center(
+                                child: Text('⭐', style: TextStyle(fontSize: 20, color: bColor)),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              badge['name'] ?? '',
+                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: bColor),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // ═══════════════════════════════════════════════════
             // 4. ACCOUNT & SETTINGS ACTIONS (ListTiles)
             // ═══════════════════════════════════════════════════
             // We only show these if the logged in user is viewing their own profile
@@ -621,10 +556,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
-                    'My Activity',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                  ),
+                  child: Text('My Activity', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                 ),
               ),
               _buildListTile(
@@ -632,14 +564,18 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                 iconColor: Colors.amber[600]!,
                 title: 'My Wallet & Coins',
                 subtitle: 'Coin balance: ${user['coins'] ?? 0}',
-                onTap: () {}, // Navigate to wallet
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()));
+                },
               ),
               _buildListTile(
                 icon: Icons.military_tech_rounded,
-                iconColor: Colors.purple[400]!,
+                iconColor: theme.primaryColor,
                 title: 'Badge Collection',
                 subtitle: '${badges.length} badges earned',
-                onTap: () {}, // Navigate to badges
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgeCollectionScreen()));
+                },
               ),
               _buildListTile(
                 icon: Icons.forum_rounded,
@@ -647,10 +583,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                 title: 'My Comments',
                 subtitle: 'View your comment history',
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const MyCommentsScreen()),
-                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const MyCommentsScreen()));
                 },
               ),
 
@@ -658,10 +591,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Settings',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                  ),
+                  child: Text('Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                 ),
               ),
               _buildListTile(
@@ -670,10 +600,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                 title: 'Switch to Author',
                 subtitle: 'Manage your series and dashboard',
                 onTap: () {
-                  final authProv = Provider.of<AuthProvider>(
-                    context,
-                    listen: false,
-                  );
+                  final authProv = Provider.of<AuthProvider>(context, listen: false);
                   showDialog(
                     context: context,
                     builder: (_) => AlertDialog(
@@ -682,14 +609,20 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                         'Change role to Author? Game features (XP, missions, etc) will be deactivated for author profile.',
                       ),
                       actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
-                        ),
+                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
                         FilledButton(
                           onPressed: () async {
                             Navigator.pop(context);
-                            await authProv.switchRole(role: 'author');
+                            if (authProv.hasAuthorProfile) {
+                              final ok = await authProv.switchRole(role: 'author');
+                              if (!ok && context.mounted) {
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).showSnackBar(SnackBar(content: Text(authProv.errorMessage ?? 'Gagal switch role')));
+                              }
+                            } else {
+                              context.go('/author-onboarding');
+                            }
                           },
                           child: const Text('Switch Role'),
                         ),
@@ -697,6 +630,12 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                     ),
                   );
                 },
+              ),
+              _buildListTile(
+                icon: Icons.palette_outlined,
+                iconColor: Colors.purple[400]!,
+                title: 'Tema Warna',
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ThemeColorScreen())),
               ),
               _buildListTile(
                 icon: Icons.settings_rounded,
@@ -715,10 +654,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                 iconColor: Colors.red[600]!,
                 title: 'Logout',
                 onTap: () async {
-                  final authProv = Provider.of<AuthProvider>(
-                    context,
-                    listen: false,
-                  );
+                  final authProv = Provider.of<AuthProvider>(context, listen: false);
                   await authProv.logout();
                   if (context.mounted) context.go('/login');
                 },
@@ -738,18 +674,11 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
   Widget _buildStatColumn(String label, String value) {
     return Column(
       children: [
-        Text(
-          value,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
+        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -757,6 +686,52 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
 
   Widget _buildStatDivider() {
     return Container(width: 1, height: 40, color: Colors.grey.withAlpha(50));
+  }
+
+  void _showBadgeDetail(BuildContext context, Map<String, dynamic> badge) {
+    final bColor = AppTheme.getColorFromHex(badge['color']);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: bColor.withAlpha(25),
+                  border: Border.all(color: bColor, width: 2),
+                ),
+                child: Center(
+                  child: Text('⭐', style: TextStyle(fontSize: 28, color: bColor)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                badge['name'] ?? '',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: bColor),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                badge['description'] ?? '',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+              if (badge['earned_at'] != null) ...[
+                const SizedBox(height: 8),
+                Text('Earned: ${badge['earned_at']}', style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+              ],
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildListTile({
@@ -770,22 +745,11 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: iconColor.withAlpha(20),
-          borderRadius: BorderRadius.circular(12),
-        ),
+        decoration: BoxDecoration(color: iconColor.withAlpha(20), borderRadius: BorderRadius.circular(12)),
         child: Icon(icon, color: iconColor, size: 24),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-      ),
-      subtitle: subtitle != null
-          ? Text(
-              subtitle,
-              style: TextStyle(color: Colors.grey[500], fontSize: 12),
-            )
-          : null,
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+      subtitle: subtitle != null ? Text(subtitle, style: TextStyle(color: Colors.grey[500], fontSize: 12)) : null,
       trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
       onTap: onTap,
     );
@@ -794,29 +758,19 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
   // ══════════════════════════════════════════════════════════
   // EDIT PROFILE BOTTOM SHEET
   // ══════════════════════════════════════════════════════════
-  void _showEditProfileSheet(
-    BuildContext ctx,
-    ThemeData theme,
-    Map<String, dynamic>? user,
-  ) {
+  void _showEditProfileSheet(BuildContext ctx, ThemeData theme, Map<String, dynamic>? user) {
     final nameCtrl = TextEditingController(text: user?['name'] ?? '');
     final bioCtrl = TextEditingController(text: user?['bio'] ?? '');
 
     final socialLinks = user?['social_links'];
     Map<String, dynamic> links = {};
     if (socialLinks != null) {
-      links = socialLinks is String
-          ? jsonDecode(socialLinks)
-          : Map<String, dynamic>.from(socialLinks);
+      links = socialLinks is String ? jsonDecode(socialLinks) : Map<String, dynamic>.from(socialLinks);
     }
 
     final igCtrl = TextEditingController(text: _extractUrl(links, 'instagram'));
-    final tiktokCtrl = TextEditingController(
-      text: _extractUrl(links, 'tiktok'),
-    );
-    final wattpadCtrl = TextEditingController(
-      text: _extractUrl(links, 'wattpad'),
-    );
+    final tiktokCtrl = TextEditingController(text: _extractUrl(links, 'tiktok'));
+    final wattpadCtrl = TextEditingController(text: _extractUrl(links, 'wattpad'));
     final webCtrl = TextEditingController(text: _extractUrl(links, 'website'));
 
     final avatarUrl = user?['avatar_url'] ?? '';
@@ -826,16 +780,9 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
     showModalBottomSheet(
       context: ctx,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          20,
-          24,
-          MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
+        padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -845,17 +792,11 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                 child: Container(
                   width: 40,
                   height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Edit Profile',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+              const Text('Edit Profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 20),
 
               // ── Avatar Picker ──
@@ -868,9 +809,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                         final source = await showModalBottomSheet<ImageSource>(
                           context: context,
                           shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(16),
-                            ),
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                           ),
                           builder: (c) => SafeArea(
                             child: Column(
@@ -879,14 +818,12 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                                 ListTile(
                                   leading: const Icon(Icons.camera_alt),
                                   title: const Text('Kamera'),
-                                  onTap: () =>
-                                      Navigator.pop(c, ImageSource.camera),
+                                  onTap: () => Navigator.pop(c, ImageSource.camera),
                                 ),
                                 ListTile(
                                   leading: const Icon(Icons.photo_library),
                                   title: const Text('Galeri'),
-                                  onTap: () =>
-                                      Navigator.pop(c, ImageSource.gallery),
+                                  onTap: () => Navigator.pop(c, ImageSource.gallery),
                                 ),
                               ],
                             ),
@@ -911,18 +848,10 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                             backgroundColor: Colors.grey[200],
                             backgroundImage: file != null
                                 ? FileImage(file)
-                                : (avatarUrl.isNotEmpty
-                                          ? NetworkImage(
-                                              ApiService.getImageUrl(avatarUrl),
-                                            )
-                                          : null)
+                                : (avatarUrl.isNotEmpty ? NetworkImage(ApiService.getImageUrl(avatarUrl)) : null)
                                       as ImageProvider?,
                             child: file == null && avatarUrl.isEmpty
-                                ? Icon(
-                                    Icons.person,
-                                    size: 52,
-                                    color: Colors.grey[400],
-                                  )
+                                ? Icon(Icons.person, size: 52, color: Colors.grey[400])
                                 : null,
                           ),
                           Positioned(
@@ -933,16 +862,9 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                               decoration: BoxDecoration(
                                 color: theme.primaryColor,
                                 shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
+                                border: Border.all(color: theme.scaffoldBackgroundColor, width: 2),
                               ),
-                              child: const Icon(
-                                Icons.camera_alt,
-                                size: 18,
-                                color: Colors.white,
-                              ),
+                              child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
                             ),
                           ),
                         ],
@@ -956,10 +878,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
               _editField('Nama', nameCtrl),
               _editField('Bio', bioCtrl, maxLines: 3),
               const SizedBox(height: 8),
-              const Text(
-                'Social Links',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-              ),
+              const Text('Social Links', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
               const SizedBox(height: 8),
               _editField('Instagram URL', igCtrl),
               _editField('TikTok URL', tiktokCtrl),
@@ -983,27 +902,19 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                                   'social_links': jsonEncode({
                                     'instagram': {
                                       'url': igCtrl.text.trim(),
-                                      'is_visible': igCtrl.text
-                                          .trim()
-                                          .isNotEmpty,
+                                      'is_visible': igCtrl.text.trim().isNotEmpty,
                                     },
                                     'tiktok': {
                                       'url': tiktokCtrl.text.trim(),
-                                      'is_visible': tiktokCtrl.text
-                                          .trim()
-                                          .isNotEmpty,
+                                      'is_visible': tiktokCtrl.text.trim().isNotEmpty,
                                     },
                                     'wattpad': {
                                       'url': wattpadCtrl.text.trim(),
-                                      'is_visible': wattpadCtrl.text
-                                          .trim()
-                                          .isNotEmpty,
+                                      'is_visible': wattpadCtrl.text.trim().isNotEmpty,
                                     },
                                     'website': {
                                       'url': webCtrl.text.trim(),
-                                      'is_visible': webCtrl.text
-                                          .trim()
-                                          .isNotEmpty,
+                                      'is_visible': webCtrl.text.trim().isNotEmpty,
                                     },
                                   }),
                                 };
@@ -1020,19 +931,15 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                                   files: files,
                                 );
 
-                                if (response.statusCode == 200) {
+                                if (response.success) {
                                   if (ctx.mounted) Navigator.pop(ctx);
                                   _fetchProfile();
                                 } else {
-                                  debugPrint(
-                                    'Profile update failed: ${response.body}',
-                                  );
+                                  debugPrint('Profile update failed: ${response.message}');
                                   if (ctx.mounted) {
                                     ScaffoldMessenger.of(ctx).showSnackBar(
                                       SnackBar(
-                                        content: Text(
-                                          'Gagal: ${response.body}',
-                                        ),
+                                        content: Text('Gagal: ${response.message}'),
                                         backgroundColor: Colors.red,
                                       ),
                                     );
@@ -1041,12 +948,9 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                               } catch (e) {
                                 debugPrint('Profile update error: $e');
                                 if (ctx.mounted) {
-                                  ScaffoldMessenger.of(ctx).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Error: $e'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
+                                  ScaffoldMessenger.of(
+                                    ctx,
+                                  ).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
                                 }
                               } finally {
                                 isSaving.value = false;
@@ -1056,18 +960,13 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
                         backgroundColor: theme.primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       child: saving
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
                           : const Text('Simpan'),
                     );
@@ -1082,11 +981,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
     );
   }
 
-  Widget _editField(
-    String label,
-    TextEditingController ctrl, {
-    int maxLines = 1,
-  }) {
+  Widget _editField(String label, TextEditingController ctrl, {int maxLines = 1}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
@@ -1097,15 +992,9 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen>
           labelText: label,
           labelStyle: TextStyle(fontSize: 13, color: Colors.grey[600]),
           filled: true,
-          fillColor: Colors.grey[100],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
+          fillColor: Theme.of(context).cardColor,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         ),
       ),
     );

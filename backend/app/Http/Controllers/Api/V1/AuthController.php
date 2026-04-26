@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateProfileRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -18,16 +20,17 @@ class AuthController extends Controller
     {
         try {
             $validated = $request->validate([
-                'name'     => ['required', 'string', 'min:2', 'max:255'],
+                'name'     => ['required', 'string', 'min:2', 'max:255', 'unique:users,name'],
                 'email'    => ['required', 'email:rfc,dns', 'unique:users,email', 'max:255'],
                 'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
                 'role'     => ['required', 'in:reader,author'],
-                'pen_name' => ['nullable', 'required_if:role,author', 'string', 'min:2', 'max:255'],
+                'pen_name' => ['nullable', 'required_if:role,author', 'string', 'min:2', 'max:255', 'unique:users,pen_name'],
                 'bio'      => ['nullable', 'string', 'max:1000'],
             ], [
                 // Pesan error kustom bahasa Indonesia
                 'name.required'           => 'Nama wajib diisi.',
                 'name.min'                => 'Nama minimal 2 karakter.',
+                'name.unique'             => 'Nama (Username) ini sudah digunakan.',
                 'email.required'          => 'Email wajib diisi.',
                 'email.email'             => 'Format email tidak valid.',
                 'email.unique'            => 'Email ini sudah terdaftar.',
@@ -38,6 +41,7 @@ class AuthController extends Controller
                 'role.in'                 => 'Role harus reader atau author.',
                 'pen_name.required_if'    => 'Pen Name wajib diisi untuk Author.',
                 'pen_name.min'            => 'Pen Name minimal 2 karakter.',
+                'pen_name.unique'         => 'Pen Name ini sudah digunakan oleh author lain.',
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -99,9 +103,15 @@ class AuthController extends Controller
         $user->tokens()->delete();
         $token = $user->createToken('mobile-app')->plainTextToken;
 
+        // Track daily login mission (only for readers)
+        if ($user->role === 'reader') {
+            $missionService = app(\App\Services\MissionService::class);
+            $missionService->autoTrack($user, 'login');
+        }
+
         return response()->json([
             'message' => 'Login berhasil',
-            'user'    => $user->only(['id', 'name', 'email', 'role', 'pen_name', 'avatar_url', 'author_avatar_url', 'coins', 'level', 'author_tier', 'theme_preference']),
+            'user'    => $user->only(['id', 'name', 'email', 'role', 'pen_name', 'avatar_url', 'author_avatar_url', 'coins', 'level', 'author_tier', 'theme_preference', 'theme_color']),
             'token'   => $token,
             'has_reader_profile' => !empty($user->name),
             'has_author_profile' => !empty($user->pen_name),
@@ -139,6 +149,7 @@ class AuthController extends Controller
             'exp_points',
             'author_tier',
             'theme_preference',
+            'theme_color',
             'bio',
             'social_links',
             'author_social_links',
@@ -173,9 +184,9 @@ class AuthController extends Controller
             if ($request->input('role') === 'author') {
                 // pen_name only required if user doesn't have one yet (first-time author onboarding)
                 if (empty($user->pen_name)) {
-                    $rules['pen_name'] = ['required', 'string', 'min:2', 'max:255'];
+                    $rules['pen_name'] = ['required', 'string', 'min:2', 'max:255', Rule::unique('users', 'pen_name')->ignore($user->id)];
                 } else {
-                    $rules['pen_name'] = ['nullable', 'string', 'min:2', 'max:255'];
+                    $rules['pen_name'] = ['nullable', 'string', 'min:2', 'max:255', Rule::unique('users', 'pen_name')->ignore($user->id)];
                 }
                 $rules['author_bio'] = ['nullable', 'string', 'max:1000'];
                 $rules['author_avatar_url'] = ['nullable', 'string'];
@@ -183,7 +194,7 @@ class AuthController extends Controller
 
             // If switching TO reader, allow optional name change
             if ($request->input('role') === 'reader') {
-                $rules['name'] = ['nullable', 'string', 'min:2', 'max:255'];
+                $rules['name'] = ['nullable', 'string', 'min:2', 'max:255', Rule::unique('users', 'name')->ignore($user->id)];
             }
 
             $validated = $request->validate($rules);
@@ -240,7 +251,7 @@ class AuthController extends Controller
     }
 
     /** Update profile (termasuk social links & avatar upload) */
-    public function updateProfile(Request $request): JsonResponse
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
     {
         $user = $request->user();
         $isAuthor = $user->role === 'author';
@@ -260,23 +271,7 @@ class AuthController extends Controller
             }
         }
 
-        try {
-            $validated = $request->validate([
-                'name'                 => ['sometimes', 'string', 'min:2', 'max:255'],
-                'pen_name'             => ['sometimes', 'string', 'max:255'],
-                'bio'                  => ['sometimes', 'nullable', 'string', 'max:1000'],
-                'author_bio'           => ['sometimes', 'nullable', 'string', 'max:1000'],
-                'avatar'               => ['sometimes', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-                'social_links'         => ['sometimes', 'nullable', 'array'],
-                'author_social_links'  => ['sometimes', 'nullable', 'array'],
-                'theme_preference'     => ['sometimes', 'in:dark,light'],
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Validasi gagal',
-                'errors'  => $e->errors(),
-            ], 422);
-        }
+        $validated = $request->validated();
 
         // Handle avatar file upload — route to role-specific field
         if ($request->hasFile('avatar')) {
@@ -303,7 +298,7 @@ class AuthController extends Controller
         // Guard: strictly allow only role-appropriate fields
         $readerOnlyFields = ['name', 'bio', 'avatar_url', 'social_links'];
         $authorOnlyFields = ['pen_name', 'author_bio', 'author_avatar_url', 'author_social_links'];
-        $sharedFields     = ['theme_preference'];
+        $sharedFields     = ['theme_preference', 'theme_color'];
 
         if ($isAuthor) {
             $allowedFields = array_merge($authorOnlyFields, $sharedFields);

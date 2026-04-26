@@ -1,9 +1,13 @@
-import 'dart:convert';
+// dashboard_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/auth_provider.dart';
 import '../../../core/constants/api_endpoints.dart';
+import '../../shared/providers/notification_provider.dart';
 import 'author_notification_screen.dart';
 import 'episode_management_screen.dart';
+import 'withdrawal_screen.dart';
 
 class AuthorDashboardScreen extends StatefulWidget {
   const AuthorDashboardScreen({super.key});
@@ -23,6 +27,11 @@ class AuthorDashboardScreenState extends State<AuthorDashboardScreen> {
   void initState() {
     super.initState();
     fetchDashboardData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<NotificationProvider>().fetchUnreadCount();
+      }
+    });
   }
 
   // ─── Data Fetching ───
@@ -36,13 +45,13 @@ class AuthorDashboardScreenState extends State<AuthorDashboardScreen> {
       final dashResponse = results[0];
       final seriesResponse = results[1];
 
-      if (dashResponse.statusCode == 200) {
-        final data = jsonDecode(dashResponse.body);
+      if (dashResponse.success) {
+        final data = dashResponse.data;
         final stats = data['stats'] ?? {};
 
         List<dynamic> allSeries = [];
-        if (seriesResponse.statusCode == 200) {
-          allSeries = jsonDecode(seriesResponse.body) ?? [];
+        if (seriesResponse.success) {
+          allSeries = seriesResponse.data is List ? seriesResponse.data : [];
         }
 
         int totalEpisodes = 0;
@@ -131,7 +140,7 @@ class AuthorDashboardScreenState extends State<AuthorDashboardScreen> {
                   label: const Text('Coba Lagi'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
+                    foregroundColor: theme.colorScheme.onPrimary,
                   ),
                 ),
               ],
@@ -166,7 +175,7 @@ class AuthorDashboardScreenState extends State<AuthorDashboardScreen> {
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: Colors.grey[900],
+                              color: theme.textTheme.bodyLarge?.color,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -187,14 +196,22 @@ class AuthorDashboardScreenState extends State<AuthorDashboardScreen> {
                           MaterialPageRoute(
                             builder: (_) => const AuthorNotificationScreen(),
                           ),
-                        );
+                        ).then((_) {
+                          if (mounted) {
+                            context.read<NotificationProvider>().fetchUnreadCount();
+                          }
+                        });
                       },
-                      icon: Badge(
-                        smallSize: 8,
-                        child: Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.grey[700],
-                        ),
+                      icon: Consumer<NotificationProvider>(
+                        builder: (context, notifProvider, child) {
+                          if (notifProvider.unreadCount > 0) {
+                            return Badge(
+                              label: Text(notifProvider.unreadCount > 99 ? '99+' : notifProvider.unreadCount.toString()),
+                              child: Icon(Icons.notifications_outlined, color: Colors.grey[700]),
+                            );
+                          }
+                          return Icon(Icons.notifications_outlined, color: Colors.grey[700]);
+                        },
                       ),
                     ),
                   ],
@@ -216,7 +233,7 @@ class AuthorDashboardScreenState extends State<AuthorDashboardScreen> {
                       title: 'Followers',
                       value: _formatNumber(_stats!['followers']),
                       icon: Icons.people_outline,
-                      color: Colors.purple,
+                      color: theme.primaryColor,
                       theme: theme,
                     ),
                   ],
@@ -240,6 +257,63 @@ class AuthorDashboardScreenState extends State<AuthorDashboardScreen> {
                       theme: theme,
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+
+                // ─── Earnings Card ───
+                Builder(
+                  builder: (context) {
+                    final user = context.watch<AuthProvider>().user;
+                    final coins = user?['coins'] ?? 0;
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const WithdrawalScreen()));
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.green.shade700, Colors.green.shade400],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.account_balance_wallet, color: Colors.white, size: 32),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Pendapatan', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$coins Coins',
+                                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    '≈ Rp ${_formatNumber(coins * 70)}',
+                                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text('Tarik Dana', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 28),
 

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
@@ -24,8 +23,8 @@ class _DailyRewardScreenState extends State<DailyRewardScreen> {
   Future<void> _fetchStatus() async {
     try {
       final res = await ApiService.get(ApiEndpoints.dailyStatus);
-      if (res.statusCode == 200) {
-        final json = jsonDecode(res.body);
+      if (res.success) {
+        final json = res.data;
         if (mounted) {
           setState(() {
             _data = json;
@@ -42,9 +41,9 @@ class _DailyRewardScreenState extends State<DailyRewardScreen> {
     if (_isClaiming) return;
     setState(() => _isClaiming = true);
     try {
-      final res = await ApiService.post(ApiEndpoints.dailyReward, {});
-      if (res.statusCode == 200) {
-        final json = jsonDecode(res.body);
+      final res = await ApiService.post(ApiEndpoints.dailyReward, body: {});
+      if (res.success) {
+        final json = res.data;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -59,7 +58,7 @@ class _DailyRewardScreenState extends State<DailyRewardScreen> {
           _fetchStatus(); // Refresh
         }
       } else {
-        final json = jsonDecode(res.body);
+        final json = res.data;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

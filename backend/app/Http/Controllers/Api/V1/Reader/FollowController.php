@@ -60,6 +60,10 @@ class FollowController extends Controller
                 $currentUser->following()->attach($user->id);
                 User::where('id', $user->id)->increment('followers_count');
 
+                // Track mission progress for follow
+                $missionService = app(\App\Services\MissionService::class);
+                $missionService->autoTrack($currentUser, 'follow');
+
                 // Notification — use role-aware display name
                 $displayName = $currentUser->role === 'author' ? $currentUser->pen_name : $currentUser->name;
                 \App\Models\Notification::create([
@@ -80,9 +84,12 @@ class FollowController extends Controller
         // Dispatch tier recalculation
         RecalculateAuthorTierJob::dispatch($user->id);
 
-        // Auto-grant follower badges
+        // Auto-grant follower badges to author
         $user->refresh();
-        BadgeService::grantFollowerBadges($user);
+        BadgeService::checkAndAwardBadges($user);
+
+        // Check follow badges for current user (reader)
+        BadgeService::checkFollowBadges($currentUser);
 
         return response()->json([
             'message'   => $isFollowing ? 'Unfollow berhasil' : 'Follow berhasil',
