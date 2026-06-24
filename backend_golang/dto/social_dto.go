@@ -1,0 +1,6 @@
+package dto
+
+type CreateCommentRequest struct {
+	Content  string  `json:"content"   binding:"required,min=1,max=1000"`
+	ParentID *uint64 `json:"parent_id"`
+}
