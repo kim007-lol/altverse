@@ -64,35 +64,19 @@ func (s *transactionService) HandleMidtransCallback(orderID, transactionID, stat
 	if err != nil {
 		return errorhandler.NewNotFound("top-up order not found")
 	}
-	if topup.Status == "success" {
-		return nil // idempotent — already processed
-	}
-
-	topup.MidtransTransactionID = &transactionID
 
 	switch status {
 	case "settlement", "capture":
-		topup.Status = "success"
-		if err := s.txRepo.UpdateTopUp(topup); err != nil {
-			return errorhandler.NewInternalError("failed to update top-up")
+		// Atomic + idempotent: credits exactly once even under duplicate webhooks.
+		if _, err := s.txRepo.SettleTopUp(orderID, transactionID); err != nil {
+			return errorhandler.NewInternalError("failed to settle top-up")
 		}
-		user, err := s.userRepo.FindByID(topup.UserID)
-		if err != nil {
-			return errorhandler.NewInternalError("user not found")
-		}
-		user.Coins += topup.CoinsRequested
-		if err := s.userRepo.Update(user); err != nil {
-			return errorhandler.NewInternalError("failed to credit coins")
-		}
-		_ = s.txRepo.CreateTransaction(&models.Transaction{
-			UserID:      topup.UserID,
-			Type:        "topup",
-			Coins:       topup.CoinsRequested,
-			AmountIDR:   topup.AmountIDR,
-			ReferenceID: &orderID,
-		})
 	case "cancel", "deny", "expire":
+		if topup.Status == "success" {
+			return nil // never downgrade an already-credited order
+		}
 		topup.Status = "failed"
+		topup.MidtransTransactionID = &transactionID
 		_ = s.txRepo.UpdateTopUp(topup)
 	}
 
@@ -123,19 +107,13 @@ func (s *transactionService) GetPendingWithdrawals(page, perPage int) ([]models.
 }
 
 func (s *transactionService) ProcessWithdrawal(withdrawalID uint64, approved bool, notes string) error {
-	w, err := s.txRepo.FindWithdrawalByID(withdrawalID)
+	// Atomic state transition guards against double-processing (paying out twice).
+	processed, err := s.txRepo.ProcessWithdrawal(withdrawalID, approved, notes)
 	if err != nil {
-		return errorhandler.NewNotFound("withdrawal not found")
+		return errorhandler.NewInternalError("failed to process withdrawal")
 	}
-
-	if approved {
-		w.Status = "success"
-	} else {
-		w.Status = "failed"
+	if !processed {
+		return errorhandler.NewConflict("withdrawal not found or already processed")
 	}
-	if notes != "" {
-		w.Notes = &notes
-	}
-
-	return s.txRepo.UpdateWithdrawal(w)
+	return nil
 }
