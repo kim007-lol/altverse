@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
+import '../../shared/widgets/author_tier_badge.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -75,6 +76,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     _fetchAll();
   }
 
+  Future<void> _exportAnalytics() async {
+    try {
+      final res = await ApiService.get('${ApiEndpoints.analyticsExport}?range=$_selectedRange');
+      if (res.success && mounted) {
+        final data = res.data;
+        final downloadUrl = data['download_url'] ?? data['url'];
+        if (downloadUrl != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export berhasil! Download: $downloadUrl')));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export berhasil, namun URL tidak ditemukan')));
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal mengekspor analitik')));
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Terjadi kesalahan saat mengekspor')));
+    }
+  }
+
   String _formatNumber(dynamic val) {
     num n = 0;
     if (val is num) {
@@ -140,7 +160,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ),
                 ],
               ),
-              _buildRangeFilter(theme),
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.download_rounded, size: 20),
+                    onPressed: _exportAnalytics,
+                    tooltip: 'Export Data',
+                    color: theme.primaryColor,
+                    style: IconButton.styleFrom(
+                      backgroundColor: theme.primaryColor.withAlpha(20),
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildRangeFilter(theme),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -306,12 +341,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   Widget _buildTierBadge(ThemeData theme) {
     final tier = _overview['author_tier'] ?? 'bronze';
-    final tierEmoji = switch (tier) {
-      'popular' => '👑',
-      'gold' => '🥇',
-      'silver' => '🥈',
-      _ => '🥉',
-    };
     final tierName = tier.toString().isNotEmpty
         ? '${tier[0].toUpperCase()}${tier.substring(1)}'
         : 'Bronze';
@@ -324,13 +353,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final nextTier = switch (tier) {
       'bronze' => 'silver',
       'silver' => 'gold',
-      'gold' => 'popular',
+      'gold' => 'diamond',
+      'diamond' => 'popular',
       _ => '',
     };
     final nextTierName = switch (tier) {
       'bronze' => 'Silver',
       'silver' => 'Gold',
-      'gold' => 'Popular',
+      'gold' => 'Diamond',
+      'diamond' => 'Popular',
       _ => '',
     };
 
@@ -354,10 +385,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withAlpha(40),
+                  color: theme.cardColor.withAlpha(50),
                   shape: BoxShape.circle,
                 ),
-                child: Text(tierEmoji, style: const TextStyle(fontSize: 28)),
+                child: AuthorTierBadge(tier: tier, size: 28),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -370,7 +401,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$tierEmoji $tierName',
+                      tierName,
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -492,14 +523,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         );
       } else {
         // Numeric requirement
-        double _parseDouble(dynamic val) {
+        double parseDouble(dynamic val) {
           if (val is num) return val.toDouble();
           if (val is String) return double.tryParse(val) ?? 0.0;
           return 0.0;
         }
 
-        final reqNum = _parseDouble(reqValue);
-        final curNum = _parseDouble(curValue);
+        final reqNum = parseDouble(reqValue);
+        final curNum = parseDouble(curValue);
         final progress = (curNum / reqNum).clamp(0.0, 1.0);
 
         widgets.add(

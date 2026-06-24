@@ -4,6 +4,9 @@ class ApiEndpoints {
   ApiEndpoints._();
 
   // ─── Auth ───
+  // Update to your machine's local IP for physical device testing
+  static const String baseUrl = 'http://127.0.0.1:8000/api/v1';
+
   static const String register = 'auth/register';
   static const String login = 'auth/login';
   static const String logout = 'auth/logout';
@@ -68,6 +71,8 @@ class ApiEndpoints {
   // ─── Reader: Reading ───
   static const String readingHistory = 'reader/history';
   static String seriesDetail(int seriesId) => 'reader/series/$seriesId';
+  static String seriesEpisodes(int seriesId) =>
+      'reader/series/$seriesId/episodes';
   static String readEpisode(int seriesId, int episodeId) =>
       'reader/series/$seriesId/episodes/$episodeId';
   static String updateProgress(int seriesId, int episodeId) =>
@@ -85,6 +90,8 @@ class ApiEndpoints {
       'reader/collections/$colId/series/$seriesId';
 
   // ─── Author: Dashboard & Analytics ───
+  static const String uploadBanner = 'author/banner';
+  static const String deleteBanner = 'author/banner';
   static const String authorDashboard = 'author/dashboard';
   static const String authorAnalyticsOverview = 'author/analytics/overview';
   static const String authorAnalyticsTrend = 'author/analytics/trend';
@@ -129,4 +136,46 @@ class ApiEndpoints {
   // ─── Reader Profile ───
   static const String readerProfile = 'reader/profile';
   static String readerProfilePublic(int userId) => 'reader/profile/$userId';
+
+  // ─── Search Suggestions & History ───
+  static const String searchSuggestions = 'reader/search/suggestions';
+  static const String searchHistory = 'reader/search/history';
+  static const String clearSearchHistory = 'reader/search/history';
+
+  // ─── Notification Preferences & Cleanup ───
+  static const String notificationPreferences = 'notifications/preferences';
+  static const String notificationCleanup = 'notifications/cleanup';
+
+  // ─── Reports ───
+  static const String reports = 'reports';
+  static const String reportReasons = 'reports/reasons';
+  static String reportDetail(int id) => 'reports/$id';
+
+  // ─── Analytics Export ───
+  static const String analyticsExport = 'author/analytics/export';
+  static const String analyticsEngagement = 'author/analytics/engagement';
+
+  // ─── Gamification ───
+  static const String gamificationDailyStatus = 'gamification/daily-status';
+  static const String claimAllMissions = 'missions/claim-all';
+
+  // ─── Top-Up (Reader) ───
+  static const String topupPackages = 'reader/topup/packages';
+  static const String topupHistory = 'reader/topup/history';
+  static const String topupCreate = 'reader/topup/create';
+  static const String topupCheckStatus = 'reader/topup/check-status';
+
+  // ─── Withdrawal (Author) ───
+  static const String withdrawals = 'author/withdrawals';
+
+  // ─── Admin ───
+  static const String adminDashboard = 'admin/dashboard';
+  static const String adminUsers = 'admin/users';
+  static String adminUserStatus(int id) => 'admin/users/$id/status';
+  static const String adminWithdrawals = 'admin/withdrawals';
+  static String adminProcessWithdrawal(int id) =>
+      'admin/withdrawals/$id/process';
+  static const String adminReports = 'admin/reports';
+  static String adminReportResolve(int id) => 'admin/reports/$id/resolve';
+  static const String adminSettings = 'admin/settings';
 }

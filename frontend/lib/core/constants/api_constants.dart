@@ -1,7 +1,20 @@
+// Imports removed
+
 class ApiConstants {
-  // Base URL - change this to your backend URL
-  static const String baseUrl = 'http://192.168.1.9:8000/api/v1';
+  // Base URL - menggunakan IP Address lokal agar bisa diakses dari HP fisik via USB/WiFi
+  static String get baseUrl {
+    // Ganti dengan IP lokal komputermu jika berubah
+    const String localIp = '127.0.0.1'; 
+    return 'http://$localIp:8000/api/v1';
+  }
+
+  // Go Image Proxy — served by the main Go server (port 8000) at /images/*
+  static String get imageBaseUrl {
+    const String localIp = '127.0.0.1';
+    return 'http://$localIp:8000';
+  }
   
+
   // Auth endpoints
   static const String login = '/auth/login';
   static const String register = '/auth/register';
@@ -61,6 +74,10 @@ class ApiConstants {
   // Missions
   static const String missions = 'missions';
   static String claimMission(int missionId) => 'missions/$missionId/claim';
+  static const String claimAllMissions = 'missions/claim-all';
+  
+  // Gamification
+  static const String gamificationDailyStatus = '/gamification/daily-status';
   
   // Leaderboard
   static const String leaderboardOverview = '/leaderboard/overview';
@@ -119,4 +136,13 @@ class ApiConstants {
   
   // Withdrawal (Author)
   static const String withdrawals = '/author/withdrawals';
+  // Admin endpoints
+  static const String adminWithdrawals = 'admin/withdrawals';
+  static String processWithdrawal(int id) => 'admin/withdrawals/$id/process';
+  static const String adminDashboard = 'admin/dashboard';
+  static const String adminUsers = 'admin/users';
+  static String adminUserStatus(int id) => 'admin/users/$id/status';
+  static const String adminReports = 'admin/reports';
+  static String adminReportResolve(int id) => 'admin/reports/$id/resolve';
+  static const String adminSettings = 'admin/settings';
 }

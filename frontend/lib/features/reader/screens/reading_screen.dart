@@ -3,9 +3,12 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/tracking_service.dart';
+import '../../../core/utils/debouncer.dart';
 import '../widgets/comment_drawer.dart'; // the actual path we used
 import '../widgets/music_player_widget.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../shared/widgets/report_dialog.dart';
 
 class ReadingScreen extends StatefulWidget {
   final int seriesId;
@@ -43,6 +46,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
   final int _prefetchBehind = 1;
   final Set<int> _prefetchedIndices = {};
 
+  // Action guards to prevent spam-clicking
+  final ActionGuard _likeGuard = ActionGuard();
+  final ActionGuard _unlockGuard = ActionGuard();
+
   @override
   void initState() {
     super.initState();
@@ -79,6 +86,13 @@ class _ReadingScreenState extends State<ReadingScreen> {
           if (_pages.isNotEmpty) {
             _prefetchAround(0);
           }
+          // Fire-and-forget: track view event to Go service
+          if (!_isLocked) {
+            TrackingService.trackView(
+              seriesId: widget.seriesId,
+              episodeId: widget.episodeId,
+            );
+          }
         }
       } else {
         if (mounted) setState(() => _isLoading = false);
@@ -92,6 +106,15 @@ class _ReadingScreenState extends State<ReadingScreen> {
     if (_isLocked || _pages.isEmpty) return;
     final progress = ((pageIndex + 1) / _pages.length) * 100;
 
+    // Fire-and-forget: buffer progress to Go service (Redis → PostgreSQL)
+    TrackingService.trackRead(
+      seriesId: widget.seriesId,
+      episodeId: widget.episodeId,
+      lastPage: pageIndex + 1,
+      progress: progress,
+    );
+
+    // Also send to Laravel (handles gamification / XP awarding)
     try {
       await ApiService.post(
         ApiEndpoints.updateProgress(widget.seriesId, widget.episodeId),
@@ -129,6 +152,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
   }
 
   Future<void> _unlockEpisode() async {
+    _unlockGuard.run(() async {
     try {
       final res = await ApiService.post(
         ApiEndpoints.episodeUnlock(widget.episodeId),
@@ -157,9 +181,11 @@ class _ReadingScreenState extends State<ReadingScreen> {
         );
       }
     }
+    });
   }
 
   Future<void> _toggleEpisodeLike() async {
+    _likeGuard.run(() async {
     final wasLiked = _isEpisodeLiked;
     // Optimistic update
     setState(() {
@@ -198,6 +224,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
         });
       }
     }
+    });
   }
 
   @override
@@ -282,9 +309,19 @@ class _ReadingScreenState extends State<ReadingScreen> {
                             ],
                           ),
                         ),
-                        IconButton(
+                        PopupMenuButton<String>(
                           icon: Icon(Icons.more_vert, color: fg),
-                          onPressed: () {},
+                          onSelected: (value) {
+                            if (value == 'report') {
+                              ReportDialog.show(context, targetType: 'episode', targetId: widget.episodeId);
+                            }
+                          },
+                          itemBuilder: (BuildContext context) => [
+                            const PopupMenuItem<String>(
+                              value: 'report',
+                              child: Text('Report Episode'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -382,6 +419,11 @@ class _ReadingScreenState extends State<ReadingScreen> {
   Widget _buildImagePage(int index) {
     final pageConfig = _pages[index];
     final url = ApiService.getImageUrl(pageConfig['image_path']);
+    
+    // We get screen width to intelligently size the memory cache.
+    // Multiply by 2 or devicePixelRatio to keep it crisp when zoomed.
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cacheWidth = (screenWidth * 2).toInt().clamp(800, 1600);
 
     return InteractiveViewer(
       minScale: 1.0,
@@ -391,6 +433,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
             ? const Icon(Icons.broken_image, size: 64, color: Colors.grey)
             : CachedNetworkImage(
                 imageUrl: url,
+                memCacheWidth: cacheWidth,
                 fit: BoxFit.contain,
                 width: double.infinity,
                 placeholder: (context, url) =>

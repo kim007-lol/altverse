@@ -120,9 +120,10 @@ class _ReaderHomeScreenState extends State<ReaderHomeScreen> {
                                 ),
                                 IconButton(
                                   onPressed: () {
+                                    final notifProvider = context.read<NotificationProvider>();
                                     Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityScreen())).then((_) {
                                       if (mounted) {
-                                        context.read<NotificationProvider>().fetchUnreadCount();
+                                        notifProvider.fetchUnreadCount();
                                       }
                                     });
                                   },

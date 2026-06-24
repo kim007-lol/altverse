@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
+import 'websocket_service.dart';
 import '../theme/app_theme.dart';
 import '../constants/api_endpoints.dart';
 
@@ -21,6 +22,13 @@ class AuthProvider extends ChangeNotifier {
 
   AuthProvider() {
     _loadLocalTheme();
+    // Wire up 401 interceptor: if any API call returns 401,
+    // automatically log out the user so they don't get stuck.
+    ApiService.onForceLogout = () {
+      if (_isLoggedIn) {
+        logout();
+      }
+    };
   }
 
   // Getters
@@ -39,6 +47,7 @@ class AuthProvider extends ChangeNotifier {
   /// Register a new user
   Future<bool> register({
     required String name,
+    required String username,
     required String email,
     required String password,
     required String passwordConfirmation,
@@ -53,6 +62,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final body = {
         'name': name,
+        'username': username,
         'email': email,
         'password': password,
         'password_confirmation': passwordConfirmation,
@@ -110,6 +120,8 @@ class AuthProvider extends ChangeNotifier {
         // Sync token to ApiService so HTTP requests include Bearer header
         if (_token != null) await _api.setToken(_token!);
         await _saveSession();
+        // Connect to Go WebSocket for real-time notifications
+        WebSocketService().connect();
         notifyListeners();
         return true;
       } else {
@@ -164,6 +176,8 @@ class AuthProvider extends ChangeNotifier {
         _themeMode = (_user?['theme_preference'] == 'light') ? ThemeMode.light : ThemeMode.dark;
         await _saveLocalTheme();
         await _saveSession(); // refresh user data
+        // Connect to Go WebSocket for real-time notifications
+        WebSocketService().connect();
         notifyListeners();
         return true;
       } else {
@@ -211,6 +225,7 @@ class AuthProvider extends ChangeNotifier {
     _isLoggedIn = false;
     _errorMessage = null;
     await _api.clearToken();
+    WebSocketService().disconnect();
     await _clearSession();
     notifyListeners();
   }

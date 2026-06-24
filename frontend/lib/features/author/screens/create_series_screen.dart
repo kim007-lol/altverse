@@ -101,6 +101,9 @@ class _CreateSeriesScreenState extends State<CreateSeriesScreen> {
         final seriesId = body['id'];
         final seriesTitle = _titleCtrl.text.trim();
 
+        // Disable tombol segera agar tidak bisa diklik lagi
+        setState(() => _isUploading = true);
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -110,7 +113,8 @@ class _CreateSeriesScreenState extends State<CreateSeriesScreen> {
           );
 
           if (seriesId != null) {
-            await Navigator.of(context).push(
+            // Gunakan pushReplacement agar user tidak bisa kembali ke halaman create
+            Navigator.of(context).pushReplacement(
               MaterialPageRoute(
                 builder: (_) => EpisodeManagementScreen(
                   seriesId: seriesId,
@@ -118,23 +122,12 @@ class _CreateSeriesScreenState extends State<CreateSeriesScreen> {
                 ),
               ),
             );
-
-            if (mounted) {
-              _titleCtrl.clear();
-              _synopsisCtrl.clear();
-              _sourceCtrl.clear();
-              setState(() {
-                _selectedGenre = '';
-                _selectedAgeRating = 'all';
-                _coverFile = null;
-                _errorMessage = null;
-              });
-
-              if (widget.onBack != null) {
-                widget.onBack!();
-              } else {
-                Navigator.pop(context);
-              }
+          } else {
+            // Fallback: kembali ke halaman sebelumnya
+            if (widget.onBack != null) {
+              widget.onBack!();
+            } else {
+              Navigator.pop(context);
             }
           }
         }

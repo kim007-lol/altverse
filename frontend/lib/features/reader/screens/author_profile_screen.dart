@@ -11,6 +11,7 @@ import '../../../core/services/auth_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../shared/widgets/au_card.dart';
+import '../../shared/widgets/author_tier_badge.dart';
 import 'series_detail_screen.dart';
 import 'theme_color_screen.dart';
 
@@ -108,13 +109,12 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
     return n.toString();
   }
 
-  Color _hexToColor(String? hex) {
-    if (hex == null || hex.isEmpty) return Colors.grey;
-    hex = hex.replaceAll('#', '');
-    return Color(int.parse('FF$hex', radix: 16));
-  }
+
 
   Color _tierColor(String? tier) {
+    if (tier == 'popular' || tier == 'top') {
+      return Colors.blue[500]!;
+    }
     switch (tier) {
       case 'bronze':
         return const Color(0xFFCD7F32);
@@ -122,8 +122,6 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
         return const Color(0xFFC0C0C0);
       case 'gold':
         return const Color(0xFFFFD700);
-      case 'platinum':
-        return const Color(0xFFE5E4E2);
       case 'diamond':
         return const Color(0xFFB9F2FF);
       default:
@@ -197,24 +195,104 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
             surfaceTintColor: Colors.transparent,
             elevation: 0,
             iconTheme: IconThemeData(color: theme.textTheme.displayLarge?.color ?? Colors.black),
+            title: Text(penName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.textTheme.displayLarge?.color)),
+            centerTitle: true,
           ),
 
           // ═══════════════ PROFILE INFO ═══════════════
           SliverToBoxAdapter(
-            child: Column(
+            child: Stack(
               children: [
-                // Avatar (moved out of negative transform to prevent clipping)
-                const SizedBox(height: 20),
+                // Banner Background
+                if (_author!['author_banner_url'] != null)
+                  Positioned.fill(
+                    child: CachedNetworkImage(
+                      imageUrl: ApiService.getImageUrl(_author!['author_banner_url']),
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                else
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            theme.primaryColor.withValues(alpha: 0.2),
+                            theme.primaryColor.withValues(alpha: 0.05),
+                            theme.scaffoldBackgroundColor,
+                          ],
+                          stops: const [0.0, 0.4, 1.0],
+                        ),
+                      ),
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            top: -40,
+                            left: -40,
+                            child: Container(
+                              width: 150,
+                              height: 150,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: theme.primaryColor.withValues(alpha: 0.15),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: -80,
+                            right: -50,
+                            child: Container(
+                              width: 250,
+                              height: 250,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: theme.primaryColor.withValues(alpha: 0.1),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                
+                // Lighter Gradient overlay to keep image very bright but still fade into background
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          theme.scaffoldBackgroundColor.withValues(alpha: 0.0), // No darkness at top
+                          theme.scaffoldBackgroundColor.withValues(alpha: 0.2), // Very subtle fade at middle
+                          theme.scaffoldBackgroundColor, // Solid background at bottom for text
+                        ],
+                        stops: const [0.0, 0.65, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Content
+                Column(
+                  children: [
+                    const SizedBox(height: 24),
                 Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: tierCol, width: 3),
-                    boxShadow: [BoxShadow(color: tierCol.withAlpha(60), blurRadius: 12, spreadRadius: 2)],
+                    border: Border.all(color: tierCol, width: 4),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withAlpha(80), blurRadius: 24, offset: const Offset(0, 8)),
+                      BoxShadow(color: tierCol.withAlpha(150), blurRadius: 16, spreadRadius: 4),
+                      BoxShadow(color: tierCol.withAlpha(80), blurRadius: 32, spreadRadius: 8),
+                    ],
                   ),
                   child: CircleAvatar(
                     radius: 56, // Larger avatar
                     backgroundColor: theme.cardColor,
-                    backgroundImage: avatarUrl.isNotEmpty ? CachedNetworkImageProvider(avatarUrl) : null,
+                    backgroundImage: avatarUrl.isNotEmpty ? CachedNetworkImageProvider(avatarUrl, maxWidth: 300) : null,
                     child: avatarUrl.isEmpty ? Icon(Icons.person, size: 56, color: Colors.grey[400]) : null,
                   ),
                 ),
@@ -227,10 +305,14 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                     Text(
                       penName,
                       style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
                         color: theme.textTheme.displayLarge?.color,
+                        shadows: [
+                          Shadow(color: theme.scaffoldBackgroundColor, blurRadius: 8),
+                          Shadow(color: theme.scaffoldBackgroundColor, blurRadius: 24),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -239,12 +321,30 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                       size: 20,
                       color: Colors.grey[600],
                     ),
-                    if (isVerified) ...[
+                    if (tier != null) ...[
+                      const SizedBox(width: 8),
+                      AuthorTierBadge(tier: tier, size: 24),
+                    ] else if (isVerified) ...[
                       const SizedBox(width: 8),
                       Icon(Icons.verified, size: 24, color: theme.primaryColor),
                     ],
                   ],
                 ),
+
+                // @username
+                if ((_author!['username'] ?? '').toString().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '@${_author!['username']}',
+                      style: TextStyle(
+                        fontSize: 15, 
+                        color: theme.textTheme.bodyMedium?.color ?? Colors.grey[700],
+                        fontWeight: FontWeight.w600,
+                        shadows: [Shadow(color: theme.scaffoldBackgroundColor, blurRadius: 12)],
+                      ),
+                    ),
+                  ),
 
                 // Author tier
                 if (tier != null) ...[
@@ -266,7 +366,13 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                     child: Text(
                       bio,
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600], height: 1.4),
+                      style: TextStyle(
+                        fontSize: 14, 
+                        color: theme.textTheme.bodyLarge?.color, 
+                        height: 1.4,
+                        fontWeight: FontWeight.w500,
+                        shadows: [Shadow(color: theme.scaffoldBackgroundColor, blurRadius: 12)],
+                      ),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -287,7 +393,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.grey.withAlpha(30)),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10, offset: const Offset(0, 4)),
+                        BoxShadow(color: Colors.black.withAlpha(30), blurRadius: 24, offset: const Offset(0, 8)),
                       ],
                     ),
                     child: Row(
@@ -315,9 +421,11 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () => _showEditProfileSheet(context, theme, _author),
-                            icon: const Icon(Icons.edit_outlined, size: 18),
-                            label: const Text('Edit Profile'),
+                            icon: const Icon(Icons.edit_rounded, size: 18),
+                            label: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.bold)),
                             style: OutlinedButton.styleFrom(
+                              foregroundColor: theme.primaryColor,
+                              side: BorderSide(color: theme.primaryColor, width: 2),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
@@ -333,9 +441,11 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                               subject: 'AU Reader Author Profile',
                             );
                           },
-                          icon: const Icon(Icons.share_outlined, size: 18),
-                          label: const Text('Share'),
+                          icon: const Icon(Icons.share_rounded, size: 18),
+                          label: const Text('Share', style: TextStyle(fontWeight: FontWeight.bold)),
                           style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.textTheme.bodyLarge?.color,
+                            side: BorderSide(color: Colors.grey.withAlpha(100), width: 2),
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
@@ -358,14 +468,14 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                               icon: Icon(_isFollowing ? Icons.check : Icons.person_add_alt_1, size: 20),
                               label: Text(
                                 _isFollowing ? 'Following' : 'Follow',
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                               ),
                               style: FilledButton.styleFrom(
                                 backgroundColor: _isFollowing ? theme.cardColor : theme.primaryColor,
                                 foregroundColor: _isFollowing
                                     ? theme.textTheme.bodyLarge?.color
                                     : theme.colorScheme.onPrimary,
-                                side: _isFollowing ? BorderSide(color: Colors.grey.withAlpha(50)) : null,
+                                side: _isFollowing ? BorderSide(color: Colors.grey.withAlpha(100), width: 2) : null,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
@@ -377,11 +487,11 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                               onPressed: () {
                                 // TODO: navigate to tip screen
                               },
-                              icon: const Icon(Icons.monetization_on_outlined, size: 18),
-                              label: const Text('Tip'),
+                              icon: const Icon(Icons.monetization_on_rounded, size: 18),
+                              label: const Text('Tip', style: TextStyle(fontWeight: FontWeight.bold)),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.orange,
-                                side: const BorderSide(color: Colors.orange),
+                                side: const BorderSide(color: Colors.orange, width: 2),
                                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
@@ -463,8 +573,10 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
 
                 const SizedBox(height: 8),
               ],
-            ),
-          ),
+            ), // Column
+              ],
+            ), // Stack
+          ), // SliverToBoxAdapter
 
           // ═══════════════ TAB BAR ═══════════════
           SliverPersistentHeader(
@@ -706,7 +818,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
               const SizedBox(width: 12),
               CircleAvatar(
                 radius: 20,
-                backgroundImage: sAvatar.isNotEmpty ? CachedNetworkImageProvider(sAvatar) : null,
+                backgroundImage: sAvatar.isNotEmpty ? CachedNetworkImageProvider(sAvatar, maxWidth: 150) : null,
                 child: sAvatar.isEmpty ? const Icon(Icons.person, size: 20) : null,
               ),
               const SizedBox(width: 12),
@@ -830,6 +942,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
   // EDIT PROFILE BOTTOM SHEET
   // ══════════════════════════════════════════════════════════
   void _showEditProfileSheet(BuildContext ctx, ThemeData theme, Map<String, dynamic>? user) {
+    final usernameCtrl = TextEditingController(text: user?['username'] ?? '');
     final penNameCtrl = TextEditingController(text: user?['pen_name'] ?? '');
     final bioCtrl = TextEditingController(text: user?['author_bio'] ?? '');
 
@@ -846,6 +959,8 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
 
     final avatarUrl = user?['author_avatar_url'] ?? '';
     final selectedAvatar = ValueNotifier<File?>(null);
+    final selectedBanner = ValueNotifier<File?>(null);
+    final isBannerDeleted = ValueNotifier<bool>(false);
     final isSaving = ValueNotifier<bool>(false);
 
     showModalBottomSheet(
@@ -946,6 +1061,129 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
               ),
               const SizedBox(height: 16),
 
+
+
+              // ── Banner Upload Section ──
+              const Text('Profile Banner', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              if (user?['can_customize_banner'] == true || user?['can_customize_banner'] == 1) ...[
+                ValueListenableBuilder<bool>(
+                  valueListenable: isBannerDeleted,
+                  builder: (context, deleted, _) {
+                    return ValueListenableBuilder<File?>(
+                      valueListenable: selectedBanner,
+                      builder: (context, file, _) {
+                        final hasExistingBanner = user?['author_banner_url'] != null && !deleted;
+                        
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              height: 120,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                              ),
+                              child: file != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.file(file, fit: BoxFit.cover),
+                                    )
+                                  : hasExistingBanner
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: CachedNetworkImage(
+                                            imageUrl: ApiService.getImageUrl(user!['author_banner_url']),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                      : Center(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.image_outlined, size: 40, color: Colors.grey[400]),
+                                              const SizedBox(height: 8),
+                                              Text('No banner', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                                            ],
+                                          ),
+                                        ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () async {
+                                      final picker = ImagePicker();
+                                      final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+                                      if (pickedFile != null) {
+                                        selectedBanner.value = File(pickedFile.path);
+                                        isBannerDeleted.value = false;
+                                      }
+                                    },
+                                    icon: const Icon(Icons.upload_outlined, size: 18),
+                                    label: const Text('Select Banner'),
+                                  ),
+                                ),
+                                if (file != null || hasExistingBanner) ...[
+                                  const SizedBox(width: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      selectedBanner.value = null;
+                                      isBannerDeleted.value = true;
+                                    },
+                                    icon: const Icon(Icons.delete_outline, size: 18),
+                                    label: const Text('Delete'),
+                                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Recommended: 1200x400px, Max 2MB',
+                              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ] else ...[
+                // Locked message for Bronze tier
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_outline, color: Colors.grey[600]),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Banner Customization Locked', style: TextStyle(fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Unlock at Silver Tier (100 followers + 100 total views)',
+                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+
+              _editField('Username', usernameCtrl, hint: 'huruf kecil, angka, underscore'),
               _editField('Pen Name', penNameCtrl),
               _editField('Bio', bioCtrl, maxLines: 3),
               const SizedBox(height: 8),
@@ -968,6 +1206,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                               isSaving.value = true;
                               try {
                                 final fields = <String, String>{
+                                  'username': usernameCtrl.text.trim().toLowerCase(),
                                   'pen_name': penNameCtrl.text.trim(),
                                   'author_bio': bioCtrl.text.trim(),
                                   'author_social_links': jsonEncode({
@@ -988,6 +1227,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                                       'is_visible': webCtrl.text.trim().isNotEmpty,
                                     },
                                   }),
+                                  '_method': 'PUT',
                                 };
 
                                 final files = <String, File>{};
@@ -995,15 +1235,33 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                                   files['avatar'] = selectedAvatar.value!;
                                 }
 
+                                if (isBannerDeleted.value) {
+                                  await ApiService.delete(ApiEndpoints.deleteBanner);
+                                } else if (selectedBanner.value != null) {
+                                  await ApiService.multipart(
+                                    ApiEndpoints.uploadBanner,
+                                    method: 'POST',
+                                    files: {'banner': selectedBanner.value!},
+                                  );
+                                }
+
+
+
                                 final response = await ApiService.multipart(
                                   ApiEndpoints.updateProfile,
-                                  method: 'PUT',
+                                  method: 'POST',
                                   fields: fields,
                                   files: files,
                                 );
 
                                 if (response.success) {
-                                  if (ctx.mounted) Navigator.pop(ctx);
+                                  // Refresh auth state so other screens show updated data
+                                  if (ctx.mounted) {
+                                    await Provider.of<AuthProvider>(ctx, listen: false).refreshProfile();
+                                    if (ctx.mounted) {
+                                      Navigator.pop(ctx);
+                                    }
+                                  }
                                   _fetchProfile();
                                 } else {
                                   debugPrint('Profile update failed: ${response.message}');
@@ -1052,7 +1310,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
     );
   }
 
-  Widget _editField(String label, TextEditingController ctrl, {int maxLines = 1}) {
+  Widget _editField(String label, TextEditingController ctrl, {int maxLines = 1, String? hint}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
@@ -1061,7 +1319,9 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
         style: const TextStyle(fontSize: 14),
         decoration: InputDecoration(
           labelText: label,
+          hintText: hint,
           labelStyle: TextStyle(fontSize: 13, color: Colors.grey[600]),
+          hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
           filled: true,
           fillColor: Theme.of(context).cardColor,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -1077,6 +1337,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
     if (val is String) return val;
     return '';
   }
+
 }
 
 // ─── Tab bar delegate for sticky tabs ───

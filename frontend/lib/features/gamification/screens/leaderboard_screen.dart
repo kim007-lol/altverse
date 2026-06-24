@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
-import 'ranking_info_screen.dart';
+import 'reader_guide_screen.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -11,8 +11,7 @@ class LeaderboardScreen extends StatefulWidget {
   State<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends State<LeaderboardScreen>
-    with SingleTickerProviderStateMixin {
+class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   // Data
@@ -89,10 +88,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               labelColor: theme.primaryColor,
               unselectedLabelColor: Colors.grey[500],
               indicatorColor: theme.primaryColor,
-              labelStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+              labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               tabs: const [
                 Tab(text: 'Top XP'),
                 Tab(text: 'Top Supporter'),
@@ -119,9 +115,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   }
 
   Widget _buildHeader(ThemeData theme) {
-    final daysLeft = _season != null
-        ? DateTime.parse(_season!['end_date']).difference(DateTime.now()).inDays
-        : 0;
+    final daysLeft = _season != null ? DateTime.parse(_season!['end_date']).difference(DateTime.now()).inDays : 0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
@@ -150,12 +144,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             ),
           ),
           IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const RankingInfoScreen()),
-            ),
-            icon: Icon(Icons.info_outline, color: Colors.grey[500], size: 22),
-            tooltip: 'How Ranking Works',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReaderGuideScreen())),
+            icon: Icon(Icons.school_outlined, color: theme.primaryColor, size: 22),
+            tooltip: 'Reader Guide',
           ),
         ],
       ),
@@ -180,12 +171,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            theme.primaryColor.withAlpha(15),
-            theme.primaryColor.withAlpha(40),
-          ],
-        ),
+        gradient: LinearGradient(colors: [theme.primaryColor.withAlpha(15), theme.primaryColor.withAlpha(40)]),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: theme.primaryColor.withAlpha(40)),
       ),
@@ -197,10 +183,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               // Supporter Badge
               if (supporterLevel != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: _parseColor(supporterLevel['color']).withAlpha(30),
                     borderRadius: BorderRadius.circular(8),
@@ -218,11 +201,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               ],
               Text(
                 'Lv.$myLevel',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey[800]),
               ),
               const Spacer(),
             ],
@@ -231,18 +210,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           // XP Progress Bar
           Row(
             children: [
-              Text(
-                'XP $totalXp / $nextLevelXp',
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-              ),
+              Text('XP $totalXp / $nextLevelXp', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
               const SizedBox(width: 8),
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: nextLevelXp > 0
-                        ? (totalXp / nextLevelXp).clamp(0.0, 1.0)
-                        : 0,
+                    value: nextLevelXp > 0 ? (totalXp / nextLevelXp).clamp(0.0, 1.0) : 0,
                     minHeight: 6,
                     backgroundColor: Colors.grey[200],
                     color: theme.primaryColor,
@@ -255,24 +229,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           // Season Stats Row
           Row(
             children: [
-              _buildStatChip(
-                icon: Icons.bolt_rounded,
-                label: '$seasonXp XP',
-                color: Colors.orange,
-              ),
+              _buildStatChip(icon: Icons.bolt_rounded, label: '$seasonXp XP', color: Colors.orange),
               const SizedBox(width: 8),
-              _buildStatChip(
-                icon: Icons.monetization_on_outlined,
-                label: '$seasonSpent spent',
-                color: Colors.green,
-              ),
+              _buildStatChip(icon: Icons.monetization_on_outlined, label: '$seasonSpent spent', color: Colors.green),
               if (seasonEarned > 0) ...[
                 const SizedBox(width: 8),
-                _buildStatChip(
-                  icon: Icons.savings_outlined,
-                  label: '$seasonEarned earned',
-                  color: Colors.blue,
-                ),
+                _buildStatChip(icon: Icons.savings_outlined, label: '$seasonEarned earned', color: Colors.blue),
               ],
             ],
           ),
@@ -281,17 +243,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     );
   }
 
-  Widget _buildStatChip({
-    required IconData icon,
-    required String label,
-    required Color color,
-  }) {
+  Widget _buildStatChip({required IconData icon, required String label, required Color color}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: BoxDecoration(color: color.withAlpha(20), borderRadius: BorderRadius.circular(8)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -299,11 +254,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
           ),
         ],
       ),
@@ -318,10 +269,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           children: [
             Icon(Icons.leaderboard_outlined, size: 48, color: Colors.grey[300]),
             const SizedBox(height: 8),
-            Text(
-              'Belum ada data',
-              style: TextStyle(color: Colors.grey[400], fontSize: 14),
-            ),
+            Text('Belum ada data', style: TextStyle(color: Colors.grey[400], fontSize: 14)),
           ],
         ),
       );
@@ -343,8 +291,19 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   Widget _buildRankTile(Map<String, dynamic> item, int rank, String type, ThemeData theme) {
     // Extract user data (shape differs between endpoints)
     final userData = item['user'] ?? item['author'] ?? item;
-    final name = userData['pen_name'] ?? userData['name'] ?? 'User';
-    final avatar = userData['avatar_url'];
+
+    // Different persona per leaderboard type:
+    // - Top XP & Top Supporter: show Reader identity (name + avatar_url)
+    // - Top Author: show Author identity (pen_name + author_avatar_url)
+    final String name;
+    final String? avatar;
+    if (type == 'author') {
+      name = userData['pen_name'] ?? userData['name'] ?? 'Author';
+      avatar = userData['author_avatar_url'] ?? userData['avatar_url'];
+    } else {
+      name = userData['name'] ?? 'User';
+      avatar = userData['avatar_url'];
+    }
 
     // Stat value — updated for new season-based leaderboards
     String statValue;
@@ -368,16 +327,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     // Rank medal
     Widget rankWidget;
     if (rank <= 3) {
-      final colors = [
-        Colors.amber[700]!,
-        Colors.grey[400]!,
-        Colors.brown[400]!,
-      ];
-      final icons = [
-        Icons.looks_one_rounded,
-        Icons.looks_two_rounded,
-        Icons.looks_3_rounded,
-      ];
+      final colors = [Colors.amber[700]!, Colors.grey[400]!, Colors.brown[400]!];
+      final icons = [Icons.looks_one_rounded, Icons.looks_two_rounded, Icons.looks_3_rounded];
       rankWidget = Icon(icons[rank - 1], color: colors[rank - 1], size: 28);
     } else {
       rankWidget = SizedBox(
@@ -385,18 +336,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         child: Text(
           '#$rank',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[500],
-          ),
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey[500]),
         ),
       );
     }
 
     // Supporter badge (for Top XP and Top Supporter tabs)
-    final supporterLevel =
-        userData['supporter_level'] ?? item['supporter_level'];
+    final supporterLevel = userData['supporter_level'] ?? item['supporter_level'];
     String? badgeName;
     Color? badgeColor;
     if (supporterLevel != null) {
@@ -413,11 +359,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       decoration: BoxDecoration(
         color: rank <= 3 ? Colors.amber.withAlpha(10) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: rank <= 3
-              ? Colors.amber.withAlpha(40)
-              : Colors.grey.withAlpha(30),
-        ),
+        border: Border.all(color: rank <= 3 ? Colors.amber.withAlpha(40) : Colors.grey.withAlpha(30)),
       ),
       child: Row(
         children: [
@@ -427,12 +369,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           CircleAvatar(
             radius: 20,
             backgroundColor: Colors.grey[200],
-            backgroundImage: avatar != null
-                ? NetworkImage(ApiService.getImageUrl(avatar))
-                : null,
-            child: avatar == null
-                ? Icon(Icons.person, color: Colors.grey[400], size: 20)
-                : null,
+            backgroundImage: avatar != null ? NetworkImage(ApiService.getImageUrl(avatar)) : null,
+            child: avatar == null ? Icon(Icons.person, color: Colors.grey[400], size: 20) : null,
           ),
           const SizedBox(width: 12),
           // Name + Badge/Tier
@@ -442,10 +380,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -453,21 +388,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                   const SizedBox(height: 2),
                   Text(
                     authorTier.toString().toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: theme.primaryColor,
-                    ),
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: theme.primaryColor),
                   ),
                 ] else if (badgeName != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     badgeName,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: badgeColor ?? Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: badgeColor ?? Colors.grey),
                   ),
                 ],
               ],
@@ -481,11 +408,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               const SizedBox(width: 4),
               Text(
                 statValue,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: statColor,
-                ),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: statColor),
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 /// Reusable Series Card widget used across Home, Search, Library screens.
 class SeriesCard extends StatelessWidget {
@@ -38,10 +39,11 @@ class SeriesCard extends StatelessWidget {
                 width: 160,
                 color: theme.primaryColor.withAlpha(20),
                 child: coverUrl.isNotEmpty
-                    ? Image.network(
-                        coverUrl,
+                    ? CachedNetworkImage(
+                        imageUrl: coverUrl,
+                        memCacheWidth: 400,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
+                        errorWidget: (context, url, error) =>
                             _placeholder(theme),
                       )
                     : _placeholder(theme),
@@ -146,10 +148,11 @@ class SeriesListCard extends StatelessWidget {
                 width: 60,
                 color: theme.primaryColor.withAlpha(20),
                 child: coverUrl.isNotEmpty
-                    ? Image.network(
-                        coverUrl,
+                    ? CachedNetworkImage(
+                        imageUrl: coverUrl,
+                        memCacheWidth: 200,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Icon(
+                        errorWidget: (context, url, error) => Icon(
                           Icons.auto_stories,
                           color: theme.primaryColor.withAlpha(80),
                         ),

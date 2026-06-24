@@ -37,7 +37,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (success) {
       final role = authProvider.role;
-      if (role == 'author') {
+      if (role == 'admin') {
+        context.go('/admin-home');
+      } else if (role == 'author') {
         context.go('/author-home');
       } else {
         context.go('/home');

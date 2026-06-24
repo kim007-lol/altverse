@@ -11,10 +11,12 @@ import '../../../core/services/auth_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../gamification/screens/gamification_dashboard_screen.dart';
 import 'my_comments_screen.dart';
 import 'theme_color_screen.dart';
 import 'badge_collection_screen.dart';
 import 'wallet_screen.dart';
+import '../../shared/screens/reports_screen.dart';
 
 class ReaderProfileScreen extends StatefulWidget {
   final int userId;
@@ -236,7 +238,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
     final supporterLevel = user['supporter_level'] as Map<String, dynamic>?;
 
     final name = user['name'] ?? 'User';
-    final handle = '@${user['name']?.toString().replaceAll(' ', '') ?? 'user'}';
+    final handle = '@${user['username'] ?? 'user'}';
     final bio = user['bio'] ?? '';
     final avatarUrl = ApiService.getImageUrl(user['avatar_url']);
 
@@ -287,7 +289,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
                     child: CircleAvatar(
                       radius: 52,
                       backgroundColor: theme.cardColor,
-                      backgroundImage: avatarUrl.isNotEmpty ? CachedNetworkImageProvider(avatarUrl) : null,
+                      backgroundImage: avatarUrl.isNotEmpty ? CachedNetworkImageProvider(avatarUrl, maxWidth: 300) : null,
                       child: avatarUrl.isEmpty ? Icon(Icons.person, size: 52, color: Colors.grey[400]) : null,
                     ),
                   ),
@@ -300,6 +302,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
                             padding: const EdgeInsets.symmetric(horizontal: 2.0),
                             child: CachedNetworkImage(
                               imageUrl: ApiService.getImageUrl(b['icon_url']),
+                              memCacheWidth: 100,
                               width: 28,
                               height: 28,
                               errorWidget: (context, url, error) => const SizedBox(),
@@ -332,6 +335,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
                     padding: const EdgeInsets.only(right: 6.0),
                     child: CachedNetworkImage(
                       imageUrl: ApiService.getImageUrl(b['icon_url']),
+                      memCacheWidth: 100,
                       width: 24,
                       height: 24,
                       errorWidget: (context, url, error) => const SizedBox(),
@@ -340,10 +344,39 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
                 }),
               ],
             ),
-            if (handle.isNotEmpty && handle != name)
+            if (handle != '@user')
               Padding(
                 padding: const EdgeInsets.only(top: 4.0),
                 child: Text(handle, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+              ),
+
+            // Supporter Tier Badge
+            if (supporterName != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: supporterCol.withAlpha(20),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: supporterCol.withAlpha(50)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.diamond_rounded, size: 14, color: supporterCol),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${supporterName.toString().toUpperCase()} SUPPORTER',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: supporterCol,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
 
             // Bio
@@ -526,7 +559,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
                                 border: Border.all(color: bColor.withAlpha(120)),
                               ),
                               child: Center(
-                                child: Text('⭐', style: TextStyle(fontSize: 20, color: bColor)),
+                                child: Text(badge['icon'] ?? badge['icon_url'] ?? '🏆', style: TextStyle(fontSize: 20, color: bColor)),
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -575,6 +608,15 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
                 subtitle: '${badges.length} badges earned',
                 onTap: () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgeCollectionScreen()));
+                },
+              ),
+              _buildListTile(
+                icon: Icons.track_changes_rounded,
+                iconColor: Colors.deepPurple[400]!,
+                title: 'Gamification Dashboard',
+                subtitle: 'Monitor XP & daily limit',
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const GamificationDashboardScreen()));
                 },
               ),
               _buildListTile(
@@ -636,6 +678,15 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
                 iconColor: Colors.purple[400]!,
                 title: 'Tema Warna',
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ThemeColorScreen())),
+              ),
+              _buildListTile(
+                icon: Icons.flag_rounded,
+                iconColor: Colors.orange[600]!,
+                title: 'My Reports',
+                subtitle: 'View your submitted reports',
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen()));
+                },
               ),
               _buildListTile(
                 icon: Icons.settings_rounded,
@@ -708,7 +759,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
                   border: Border.all(color: bColor, width: 2),
                 ),
                 child: Center(
-                  child: Text('⭐', style: TextStyle(fontSize: 28, color: bColor)),
+                  child: Text(badge['icon'] ?? badge['icon_url'] ?? '🏆', style: TextStyle(fontSize: 28, color: bColor)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -759,6 +810,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
   // EDIT PROFILE BOTTOM SHEET
   // ══════════════════════════════════════════════════════════
   void _showEditProfileSheet(BuildContext ctx, ThemeData theme, Map<String, dynamic>? user) {
+    final usernameCtrl = TextEditingController(text: user?['username'] ?? '');
     final nameCtrl = TextEditingController(text: user?['name'] ?? '');
     final bioCtrl = TextEditingController(text: user?['bio'] ?? '');
 
@@ -875,7 +927,8 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
               ),
               const SizedBox(height: 16),
 
-              _editField('Nama', nameCtrl),
+              _editField('Username', usernameCtrl, hint: 'huruf kecil, angka, underscore'),
+              _editField('Nama Tampilan', nameCtrl),
               _editField('Bio', bioCtrl, maxLines: 3),
               const SizedBox(height: 8),
               const Text('Social Links', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
@@ -897,6 +950,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
                               isSaving.value = true;
                               try {
                                 final fields = <String, String>{
+                                  'username': usernameCtrl.text.trim().toLowerCase(),
                                   'name': nameCtrl.text.trim(),
                                   'bio': bioCtrl.text.trim(),
                                   'social_links': jsonEncode({
@@ -917,6 +971,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
                                       'is_visible': webCtrl.text.trim().isNotEmpty,
                                     },
                                   }),
+                                  '_method': 'PUT',
                                 };
 
                                 final files = <String, File>{};
@@ -926,13 +981,19 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
 
                                 final response = await ApiService.multipart(
                                   ApiEndpoints.updateProfile,
-                                  method: 'PUT',
+                                  method: 'POST',
                                   fields: fields,
                                   files: files,
                                 );
 
                                 if (response.success) {
-                                  if (ctx.mounted) Navigator.pop(ctx);
+                                  // Refresh auth state so other screens show updated data
+                                  if (ctx.mounted) {
+                                    await Provider.of<AuthProvider>(ctx, listen: false).refreshProfile();
+                                    if (ctx.mounted) {
+                                      Navigator.pop(ctx);
+                                    }
+                                  }
                                   _fetchProfile();
                                 } else {
                                   debugPrint('Profile update failed: ${response.message}');
@@ -981,7 +1042,7 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
     );
   }
 
-  Widget _editField(String label, TextEditingController ctrl, {int maxLines = 1}) {
+  Widget _editField(String label, TextEditingController ctrl, {int maxLines = 1, String? hint}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
@@ -990,7 +1051,9 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
         style: const TextStyle(fontSize: 14),
         decoration: InputDecoration(
           labelText: label,
+          hintText: hint,
           labelStyle: TextStyle(fontSize: 13, color: Colors.grey[600]),
+          hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
           filled: true,
           fillColor: Theme.of(context).cardColor,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),

@@ -67,7 +67,7 @@ class AuthService extends ChangeNotifier {
       'password': password,
       'password_confirmation': passwordConfirmation,
       'role': role,
-      ?'pen_name': penName,
+      'pen_name': ?penName,
     };
     
     final response = await ApiService.post(ApiConstants.register, body: body);
@@ -127,7 +127,7 @@ class AuthService extends ChangeNotifier {
     
     final body = {
       'role': role,
-      ?'pen_name': penName,
+      'pen_name': ?penName,
     };
     
     final response = await ApiService.post(ApiConstants.switchRole, body: body);

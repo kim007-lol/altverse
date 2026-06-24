@@ -15,8 +15,8 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
   List<dynamic> _withdrawals = [];
   bool _isLoading = true;
 
-  // Exchange rate: 1 Coin = Rp 70 for Author cashout
-  static const int exchangeRate = 70;
+  // Exchange rate: 1 Coin = Rp 80 for Author cashout (80/20 split)
+  static const int exchangeRate = 80;
   static const int minWithdrawal = 1000;
 
   @override
@@ -85,7 +85,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                   const SizedBox(height: 4),
                   Text('Minimum penarikan: $minWithdrawal Coins', style: const TextStyle(color: Colors.orange, fontSize: 12)),
                   const SizedBox(height: 4),
-                  Text('Kurs: 1 Coin = Rp $exchangeRate (Platform fee 30%)', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  Text('Kurs: 1 Coin = Rp $exchangeRate (Platform fee 20%)', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                   const SizedBox(height: 20),
 
                   TextFormField(

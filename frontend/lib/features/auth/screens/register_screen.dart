@@ -16,6 +16,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   // Step 1: Basic
   final _nameCtrl = TextEditingController();
+  final _usernameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _passConfirmCtrl = TextEditingController();
@@ -33,6 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _usernameCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     _passConfirmCtrl.dispose();
@@ -47,6 +49,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // Validasi semua field di Step 1
       if (_nameCtrl.text.trim().isEmpty) {
         _showError('Nama wajib diisi!');
+        return;
+      }
+      if (_usernameCtrl.text.trim().isEmpty) {
+        _showError('Username wajib diisi!');
         return;
       }
       if (_emailCtrl.text.trim().isEmpty) {
@@ -97,6 +103,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final success = await authProvider.register(
       name: _nameCtrl.text.trim(),
+      username: _usernameCtrl.text.trim(),
       email: _emailCtrl.text.trim(),
       password: _passCtrl.text,
       passwordConfirmation: _passConfirmCtrl.text,
@@ -209,6 +216,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
             keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: 20),
+
+          const Text('Username', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _usernameCtrl,
+            decoration: InputDecoration(
+              hintText: 'your_username',
+              hintStyle: TextStyle(color: Colors.grey[400]),
+              filled: true,
+              fillColor: Theme.of(context).cardColor,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            ),
           ),
           const SizedBox(height: 20),
 

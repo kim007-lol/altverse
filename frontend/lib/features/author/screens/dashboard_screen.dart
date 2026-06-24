@@ -197,7 +197,7 @@ class AuthorDashboardScreenState extends State<AuthorDashboardScreen> {
                             builder: (_) => const AuthorNotificationScreen(),
                           ),
                         ).then((_) {
-                          if (mounted) {
+                          if (context.mounted) {
                             context.read<NotificationProvider>().fetchUnreadCount();
                           }
                         });

@@ -3,6 +3,7 @@ import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../shared/widgets/au_card.dart';
 import 'series_detail_screen.dart';
+import 'collections_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -30,7 +31,7 @@ class _LibraryScreenState extends State<LibraryScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _fetchHistory();
     _fetchBookmarks();
     _fetchUnlocked();
@@ -151,6 +152,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                 Tab(text: 'Continue'),
                 Tab(text: 'Saved'),
                 Tab(text: 'Unlocked'),
+                Tab(text: 'Koleksi'),
               ],
             ),
 
@@ -162,6 +164,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                   _buildHistoryTab(theme),
                   _buildBookmarksTab(theme),
                   _buildUnlockedTab(theme),
+                  const CollectionsScreen(),
                 ],
               ),
             ),

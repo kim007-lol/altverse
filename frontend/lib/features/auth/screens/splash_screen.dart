@@ -46,7 +46,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     if (hasSession) {
       // Auto-login: redirect based on role
       final role = authProvider.role;
-      if (role == 'author') {
+      if (role == 'admin') {
+        context.go('/admin-home');
+      } else if (role == 'author') {
         context.go('/author-home');
       } else {
         context.go('/home');

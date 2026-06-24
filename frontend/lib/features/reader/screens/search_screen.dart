@@ -6,6 +6,7 @@ import '../../../core/constants/api_endpoints.dart';
 import 'series_detail_screen.dart';
 import 'reader_profile_screen.dart';
 import 'author_profile_screen.dart';
+import '../../shared/widgets/author_tier_badge.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -17,15 +18,19 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  final _searchFocus = FocusNode();
   String _selectedGenre = 'all';
   String _sortBy = 'trending';
   List<dynamic> _results = [];
   List<dynamic> _userResults = [];
+  List<dynamic> _searchHistory = [];
+  List<dynamic> _suggestions = [];
   int _totalResults = 0;
   int _currentPage = 1;
   int _lastPage = 1;
   bool _isLoading = false;
   bool _isLoadingMore = false;
+  bool _showHistory = false;
   Timer? _debounce;
 
   static const _genres = [
@@ -55,6 +60,10 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _scrollCtrl.addListener(_onScroll);
+    _searchFocus.addListener(() {
+      setState(() => _showHistory = _searchFocus.hasFocus && _searchCtrl.text.isEmpty);
+    });
+    _loadSearchHistory();
     _performSearch();
   }
 
@@ -62,8 +71,38 @@ class _SearchScreenState extends State<SearchScreen> {
   void dispose() {
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
+    _searchFocus.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadSearchHistory() async {
+    try {
+      final res = await ApiService.get(ApiEndpoints.searchHistory);
+      if (res.success && mounted) {
+        setState(() => _searchHistory = res.data['data'] ?? res.data ?? []);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _clearSearchHistory() async {
+    try {
+      await ApiService.delete(ApiEndpoints.clearSearchHistory);
+      if (mounted) setState(() => _searchHistory = []);
+    } catch (_) {}
+  }
+
+  Future<void> _fetchSuggestions(String query) async {
+    if (query.length < 2) {
+      setState(() => _suggestions = []);
+      return;
+    }
+    try {
+      final res = await ApiService.get('${ApiEndpoints.searchSuggestions}?q=$query');
+      if (res.success && mounted) {
+        setState(() => _suggestions = res.data['data'] ?? res.data ?? []);
+      }
+    } catch (_) {}
   }
 
   // ─── Infinite scroll ───
@@ -76,8 +115,10 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _onSearchChanged(String val) {
+    setState(() => _showHistory = val.isEmpty && _searchFocus.hasFocus);
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
+      _fetchSuggestions(val);
       _resetAndSearch();
     });
   }
@@ -190,6 +231,7 @@ class _SearchScreenState extends State<SearchScreen> {
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
               child: TextField(
                 controller: _searchCtrl,
+                focusNode: _searchFocus,
                 onChanged: _onSearchChanged,
                 decoration: InputDecoration(
                   hintText: 'Cari judul series atau nama author...',
@@ -200,6 +242,10 @@ class _SearchScreenState extends State<SearchScreen> {
                           icon: const Icon(Icons.clear, size: 18),
                           onPressed: () {
                             _searchCtrl.clear();
+                            setState(() {
+                              _suggestions = [];
+                              _showHistory = _searchFocus.hasFocus;
+                            });
                             _resetAndSearch();
                           },
                         )
@@ -300,6 +346,80 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
             ),
+
+            // ─── Suggestions Overlay ───
+            if (_suggestions.isNotEmpty && _searchCtrl.text.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                constraints: const BoxConstraints(maxHeight: 180),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)],
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _suggestions.length,
+                  itemBuilder: (_, i) {
+                    final s = _suggestions[i];
+                    final label = s is String ? s : (s['title'] ?? s.toString());
+                    return ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.search, size: 16),
+                      title: Text(label, style: const TextStyle(fontSize: 13)),
+                      onTap: () {
+                        _searchCtrl.text = label;
+                        _searchCtrl.selection = TextSelection.fromPosition(TextPosition(offset: label.length));
+                        setState(() => _suggestions = []);
+                        _resetAndSearch();
+                      },
+                    );
+                  },
+                ),
+              ),
+
+            // ─── Search History ───
+            if (_showHistory && _searchHistory.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                constraints: const BoxConstraints(maxHeight: 200),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Riwayat Pencarian', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+                        TextButton(
+                          onPressed: _clearSearchHistory,
+                          child: const Text('Hapus Semua', style: TextStyle(fontSize: 12, color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _searchHistory.length,
+                        itemBuilder: (_, i) {
+                          final h = _searchHistory[i];
+                          final query = h is String ? h : (h['query'] ?? h.toString());
+                          return ListTile(
+                            dense: true,
+                            leading: Icon(Icons.history, size: 16, color: Colors.grey[400]),
+                            title: Text(query, style: const TextStyle(fontSize: 13)),
+                            onTap: () {
+                              _searchCtrl.text = query;
+                              setState(() => _showHistory = false);
+                              _resetAndSearch();
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             // ─── Results ───
             Expanded(
@@ -424,10 +544,10 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
         ..._userResults.map((user) {
           final u = user as Map<String, dynamic>;
-          final avatarUrl = ApiService.getImageUrl(u['avatar_url']);
-          final name = u['pen_name'] ?? 'Unknown';
-          final handle = u['name'] ?? '';
           final role = u['role'] ?? 'reader';
+          final username = u['username'] ?? '';
+          final displayName = u['name'] ?? 'Unknown';
+          final avatarUrl = ApiService.getImageUrl(u['avatar_url']);
           final level = u['level'] ?? 0;
           final followersCount = u['followers_count'] ?? 0;
           final supporter = u['supporter_level'] as Map<String, dynamic>?;
@@ -465,7 +585,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                     const SizedBox(width: 12),
 
-                    // Name + info
+                    // Name + @username + role badge
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,43 +594,47 @@ class _SearchScreenState extends State<SearchScreen> {
                             children: [
                               Flexible(
                                 child: Text(
-                                  name,
+                                  displayName,
                                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              if (supporter != null) ...[
+                              if (role == 'author' && u['author_tier'] != null) ...[
+                                const SizedBox(width: 4),
+                                AuthorTierBadge(tier: u['author_tier'], size: 16),
+                              ] else if (supporter != null) ...[
                                 const SizedBox(width: 4),
                                 Text(supporter['icon']?.toString() ?? '💎', style: const TextStyle(fontSize: 12)),
                               ],
                             ],
                           ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: role == 'author'
-                                      ? theme.primaryColor.withAlpha(20)
-                                      : theme.primaryColor.withAlpha(15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  role == 'author' ? 'Author' : 'Lv.$level Reader',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: role == 'author' ? theme.primaryColor : theme.primaryColor,
-                                  ),
-                                ),
+                          if (username.isNotEmpty) ...[
+                            const SizedBox(height: 1),
+                            Text(
+                              '@$username',
+                              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          const SizedBox(height: 3),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: role == 'author'
+                                  ? theme.primaryColor.withAlpha(20)
+                                  : theme.primaryColor.withAlpha(15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              role == 'author' ? 'Author' : 'Lv.$level Reader',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: theme.primaryColor,
                               ),
-                              if (handle.isNotEmpty && handle != name) ...[
-                                const SizedBox(width: 6),
-                                Text('@$handle', style: TextStyle(fontSize: 11, color: Colors.grey[400])),
-                              ],
-                            ],
+                            ),
                           ),
                         ],
                       ),
@@ -641,11 +765,21 @@ class _RankCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 3),
-                    Text(
-                      authorName,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            authorName,
+                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (authorData != null && authorData['author_tier'] != null) ...[
+                          const SizedBox(width: 4),
+                          AuthorTierBadge(tier: authorData['author_tier'], size: 14),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 5),
 

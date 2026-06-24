@@ -15,13 +15,12 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
   List<dynamic> _earnedBadges = [];
   List<dynamic> _lockedBadges = [];
   String _selectedCategory = 'all';
+  String _selectedFilter = 'all'; // 'all', 'earned', 'locked'
 
   static const _categories = [
     {'key': 'all', 'label': 'All', 'icon': Icons.grid_view},
-    {'key': 'reading', 'label': 'Reading', 'icon': Icons.menu_book},
-    {'key': 'social', 'label': 'Social', 'icon': Icons.people},
-    {'key': 'creator', 'label': 'Creator', 'icon': Icons.create},
-    {'key': 'special', 'label': 'Special', 'icon': Icons.star},
+    {'key': 'reader', 'label': 'Reader', 'icon': Icons.menu_book},
+    {'key': 'author', 'label': 'Author', 'icon': Icons.create},
   ];
 
   @override
@@ -36,8 +35,6 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
       final res = await ApiService.get(ApiEndpoints.badges);
       if (res.success && mounted) {
         final badges = (res.data['badges'] as List?) ?? [];
-
-        // Separate earned and locked badges
         final earned = badges.where((b) => b['earned_at'] != null).toList();
         final locked = badges.where((b) => b['earned_at'] == null).toList();
 
@@ -58,11 +55,50 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
     return badges.where((b) => b['category'] == _selectedCategory).toList();
   }
 
+  Future<void> _togglePinBadge(Map<String, dynamic> badge) async {
+    final badgeId = badge['id'];
+    if (badgeId == null) return;
+
+    try {
+      final res = await ApiService.post(ApiEndpoints.pinBadge(badgeId));
+      if (res.success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res.message.isNotEmpty ? res.message : 'Badge status updated!'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        await _fetchBadges(); // Refresh to update pin state
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res.message.isNotEmpty ? res.message : 'Gagal pin badge'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal pin badge'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final filteredEarned = _getFilteredBadges(_earnedBadges);
+    final pinnedEarned = filteredEarned.where((b) => b['is_pinned'] == true).toList();
+    final unpinnedEarned = filteredEarned.where((b) => b['is_pinned'] != true).toList();
     final filteredLocked = _getFilteredBadges(_lockedBadges);
+
+    final showEarned = _selectedFilter == 'all' || _selectedFilter == 'earned';
+    final showLocked = _selectedFilter == 'all' || _selectedFilter == 'locked';
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -83,79 +119,61 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Category Filter
+                    // Category Filter (Reader / Author / All)
                     _buildCategoryFilter(theme),
+
+                    const SizedBox(height: 12),
+
+                    // Status Filter (All / Earned / Locked)
+                    _buildStatusFilter(theme),
 
                     const SizedBox(height: 20),
 
-                    // Earned Badges
-                    if (filteredEarned.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Row(
-                          children: [
-                            Icon(Icons.emoji_events, size: 20, color: theme.primaryColor),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Earned Badges',
-                              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: theme.primaryColor.withAlpha(25),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${filteredEarned.length}',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.primaryColor),
-                              ),
-                            ),
-                          ],
-                        ),
+                    // Pinned Badges
+                    if (showEarned && pinnedEarned.isNotEmpty) ...[
+                      _buildSectionHeader(
+                        theme,
+                        icon: Icons.push_pin,
+                        label: 'Pinned Badges',
+                        count: pinnedEarned.length,
+                        color: Colors.orange,
                       ),
                       const SizedBox(height: 12),
-                      _buildBadgeGrid(filteredEarned, theme, isEarned: true),
+                      _buildBadgeGrid(pinnedEarned, theme, isEarned: true),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // Earned Badges
+                    if (showEarned && unpinnedEarned.isNotEmpty) ...[
+                      _buildSectionHeader(
+                        theme,
+                        icon: Icons.emoji_events,
+                        label: 'Earned Badges',
+                        count: unpinnedEarned.length,
+                        color: theme.primaryColor,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildBadgeGrid(unpinnedEarned, theme, isEarned: true),
                     ],
 
                     // Locked Badges
-                    if (filteredLocked.isNotEmpty) ...[
+                    if (showLocked && filteredLocked.isNotEmpty) ...[
                       const SizedBox(height: 24),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Row(
-                          children: [
-                            Icon(Icons.lock_outline, size: 20, color: Colors.grey[400]),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Locked Badges',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.withAlpha(25),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${filteredLocked.length}',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[600]),
-                              ),
-                            ),
-                          ],
-                        ),
+                      _buildSectionHeader(
+                        theme,
+                        icon: Icons.lock_outline,
+                        label: 'Locked Badges',
+                        count: filteredLocked.length,
+                        color: Colors.grey[500]!,
                       ),
                       const SizedBox(height: 12),
                       _buildBadgeGrid(filteredLocked, theme, isEarned: false),
                     ],
 
                     // Empty State
-                    if (filteredEarned.isEmpty && filteredLocked.isEmpty) _buildEmptyState(theme),
+                    if ((showEarned ? filteredEarned : []).isEmpty &&
+                        (showLocked ? filteredLocked : []).isEmpty)
+                      _buildEmptyState(theme),
 
                     const SizedBox(height: 32),
                   ],
@@ -165,6 +183,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
     );
   }
 
+  // ─── Stats Summary ───
   Widget _buildStatsSummary(ThemeData theme) {
     final totalBadges = _earnedBadges.length + _lockedBadges.length;
     final earnedCount = _earnedBadges.length;
@@ -225,15 +244,13 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
       children: [
         Icon(icon, color: color, size: 24),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
-        ),
+        Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
         Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
       ],
     );
   }
 
+  // ─── Category Filter (All / Reader / Author) ───
   Widget _buildCategoryFilter(ThemeData theme) {
     return SizedBox(
       height: 40,
@@ -247,9 +264,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: GestureDetector(
-              onTap: () {
-                setState(() => _selectedCategory = cat['key'] as String);
-              },
+              onTap: () => setState(() => _selectedCategory = cat['key'] as String),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
@@ -280,6 +295,64 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
     );
   }
 
+  // ─── Status Filter (All / Earned / Locked) ───
+  Widget _buildStatusFilter(ThemeData theme) {
+    final filters = [
+      {'key': 'all', 'label': 'All'},
+      {'key': 'earned', 'label': 'Earned'},
+      {'key': 'locked', 'label': 'Locked'},
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: filters.map((f) {
+          final isSelected = _selectedFilter == f['key'];
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(f['label']!),
+              selected: isSelected,
+              onSelected: (_) => setState(() => _selectedFilter = f['key']!),
+              selectedColor: theme.primaryColor.withAlpha(40),
+              labelStyle: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? theme.primaryColor : Colors.grey[600],
+              ),
+              side: BorderSide(
+                color: isSelected ? theme.primaryColor.withAlpha(80) : Colors.grey.withAlpha(50),
+              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // ─── Section Header ───
+  Widget _buildSectionHeader(ThemeData theme,
+      {required IconData icon, required String label, required int count, required Color color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 8),
+          Text(label, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(color: color.withAlpha(25), borderRadius: BorderRadius.circular(12)),
+            child: Text('$count', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Badge Grid ───
   Widget _buildBadgeGrid(List<dynamic> badges, ThemeData theme, {required bool isEarned}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -304,6 +377,7 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
   Widget _buildBadgeCard(Map<String, dynamic> badge, ThemeData theme, {required bool isEarned}) {
     final bColor = AppTheme.getColorFromHex(badge['color']);
     final icon = badge['icon'] ?? '🏆';
+    final isPinned = badge['is_pinned'] == true;
 
     return GestureDetector(
       onTap: () => _showBadgeDetail(badge, theme, isEarned),
@@ -311,31 +385,52 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
         decoration: BoxDecoration(
           color: isEarned ? bColor.withAlpha(15) : Colors.grey.withAlpha(15),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isEarned ? bColor.withAlpha(50) : Colors.grey.withAlpha(50), width: 2),
+          border: Border.all(
+            color: isPinned
+                ? Colors.amber.withAlpha(150)
+                : isEarned
+                    ? bColor.withAlpha(50)
+                    : Colors.grey.withAlpha(50),
+            width: isPinned ? 2.5 : 2,
+          ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Text(icon, style: TextStyle(fontSize: 40, color: isEarned ? null : Colors.grey[400])),
-                if (!isEarned) Icon(Icons.lock, size: 24, color: Colors.grey[600]),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                badge['name'] ?? '',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isEarned ? bColor : Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+            // Pin indicator
+            if (isPinned)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Icon(Icons.push_pin_rounded, size: 14, color: Colors.amber[700]),
+              ),
+            // Badge content
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Text(icon, style: TextStyle(fontSize: 40, color: isEarned ? null : Colors.grey[400])),
+                      if (!isEarned) Icon(Icons.lock, size: 24, color: Colors.grey[600]),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      badge['name'] ?? '',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: isEarned ? bColor : Colors.grey[600],
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -352,10 +447,8 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
           children: [
             Icon(Icons.search_off, size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            Text(
-              'No badges found',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[600]),
-            ),
+            Text('No badges found',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[600])),
             const SizedBox(height: 8),
             Text('Try selecting a different category', style: TextStyle(fontSize: 13, color: Colors.grey[400])),
           ],
@@ -364,14 +457,20 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
     );
   }
 
+  // ─── Badge Detail Sheet ───
   void _showBadgeDetail(Map<String, dynamic> badge, ThemeData theme, bool isEarned) {
     final bColor = AppTheme.getColorFromHex(badge['color']);
     final icon = badge['icon'] ?? '🏆';
+    final isPinned = badge['is_pinned'] == true;
+
+    // Check if this is a lifetime badge (auto-pinned, can't manual pin)
+    final key = badge['key'] ?? '';
+    final isLifetimeBadge = key.startsWith('lifetime_');
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (ctx) => Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: theme.scaffoldBackgroundColor,
@@ -446,21 +545,48 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            // Close Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            // Action Buttons
+            Row(
+              children: [
+                // Pin/Unpin Button (only for earned non-lifetime badges)
+                if (isEarned && !isLifetimeBadge) ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _togglePinBadge(badge);
+                      },
+                      icon: Icon(
+                        isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                        size: 18,
+                      ),
+                      label: Text(isPinned ? 'Unpin' : 'Pin to Profile'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: isPinned ? Colors.amber[700] : theme.primaryColor,
+                        side: BorderSide(color: isPinned ? Colors.amber.withAlpha(150) : theme.primaryColor.withAlpha(80)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                // Close Button
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Close', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  ),
                 ),
-                child: const Text('Close', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-              ),
+              ],
             ),
           ],
         ),

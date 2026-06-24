@@ -10,15 +10,26 @@ class FollowingScreen extends StatefulWidget {
   State<FollowingScreen> createState() => _FollowingScreenState();
 }
 
-class _FollowingScreenState extends State<FollowingScreen> {
+class _FollowingScreenState extends State<FollowingScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabCtrl;
   List<dynamic> _authors = [];
+  List<dynamic> _followers = [];
   bool _isLoading = true;
+  bool _isLoadingFollowers = true;
   bool _hasError = false;
 
   @override
   void initState() {
     super.initState();
+    _tabCtrl = TabController(length: 2, vsync: this);
     _fetchFollowing();
+    _fetchFollowers();
+  }
+
+  @override
+  void dispose() {
+    _tabCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchFollowing() async {
@@ -76,8 +87,110 @@ class _FollowingScreenState extends State<FollowingScreen> {
     }
   }
 
+  Future<void> _fetchFollowers() async {
+    if (!mounted) return;
+    setState(() => _isLoadingFollowers = true);
+    try {
+      final res = await ApiService.get(ApiEndpoints.followers);
+      if (res.success && mounted) {
+        setState(() {
+          _followers = res.data['data'] ?? [];
+          _isLoadingFollowers = false;
+        });
+      } else if (mounted) {
+        setState(() => _isLoadingFollowers = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingFollowers = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabCtrl,
+          tabs: [
+            Tab(text: 'Following (${_authors.length})'),
+            Tab(text: 'Followers (${_followers.length})'),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabCtrl,
+            children: [
+              _buildFollowingTab(),
+              _buildFollowersTab(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFollowersTab() {
+    if (_isLoadingFollowers) return const Center(child: CircularProgressIndicator());
+    if (_followers.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.people_outline, size: 64, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text('Belum ada followers', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[600])),
+            const SizedBox(height: 8),
+            Text('Bagikan profilmu agar orang lain mengikutimu!', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.grey[400])),
+          ],
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _fetchFollowers,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        itemCount: _followers.length,
+        itemBuilder: (context, i) {
+          final f = _followers[i];
+          final imgUrl = f['avatar_url'] != null ? ApiService.getImageUrl(f['avatar_url']) : null;
+          final theme = Theme.of(context);
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.grey.withAlpha(25), borderRadius: BorderRadius.circular(16)),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: theme.primaryColor.withAlpha(30),
+                  backgroundImage: imgUrl != null && imgUrl.isNotEmpty ? NetworkImage(imgUrl) : null,
+                  child: imgUrl == null || imgUrl.isEmpty ? Icon(Icons.person, size: 24, color: theme.primaryColor) : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(f['pen_name'] ?? f['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      const SizedBox(height: 2),
+                      Text('@${f['name'] ?? ''}', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: theme.primaryColor.withAlpha(15), borderRadius: BorderRadius.circular(12)),
+                  child: Text('Lv.${f['level'] ?? 1}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: theme.primaryColor)),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFollowingTab() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }

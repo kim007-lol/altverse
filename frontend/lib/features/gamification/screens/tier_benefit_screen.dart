@@ -187,7 +187,7 @@ class _TierBenefitScreenState extends State<TierBenefitScreen> {
     Map<String, dynamic> progress,
     ThemeData theme,
   ) {
-    final tierOrder = ['bronze', 'silver', 'gold', 'popular'];
+    final tierOrder = ['bronze', 'silver', 'gold', 'diamond', 'popular'];
     final currentIdx = tierOrder.indexOf(currentTier);
 
     return tierOrder.map((tier) {
@@ -358,6 +358,7 @@ class _TierBenefitScreenState extends State<TierBenefitScreen> {
   // ── Helpers ──
   String _tierEmoji(String tier) => switch (tier) {
     'popular' => '👑',
+    'diamond' => '💎',
     'gold' => '🥇',
     'silver' => '🥈',
     _ => '🥉',
@@ -365,6 +366,7 @@ class _TierBenefitScreenState extends State<TierBenefitScreen> {
 
   Color _tierColor(String tier, ThemeData theme) => switch (tier) {
     'popular' => theme.primaryColor,
+    'diamond' => Colors.lightBlue,
     'gold' => Colors.amber,
     'silver' => Colors.blueGrey,
     _ => Colors.brown,

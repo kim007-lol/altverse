@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/websocket_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 
 /// Reader Activity tab — shows reader-specific notifications
@@ -14,11 +16,26 @@ class _ActivityScreenState extends State<ActivityScreen> {
   List<dynamic> _notifications = [];
   bool _isLoading = true;
   int _unreadCount = 0;
+  StreamSubscription<Map<String, dynamic>>? _wsSubscription;
 
   @override
   void initState() {
     super.initState();
     _fetch();
+    // Listen for real-time notifications via WebSocket
+    _wsSubscription = WebSocketService().notifications.listen((notif) {
+      if (!mounted) return;
+      setState(() {
+        _notifications.insert(0, notif);
+        _unreadCount++;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _wsSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetch() async {
@@ -184,6 +201,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
     'new_series' => Icons.library_books,
     'purchase_success' => Icons.check_circle,
     'follow_update' => Icons.person_add_alt_1,
+    'badge_earned' => Icons.emoji_events_rounded,
+    'daily_reward' => Icons.card_giftcard_rounded,
+    'level_up' => Icons.trending_up_rounded,
+    'season_reward' => Icons.military_tech_rounded,
     'system' => Icons.info_outline,
     _ => Icons.notifications_outlined,
   };
@@ -194,6 +215,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
     'new_series' => Colors.indigo,
     'purchase_success' => Colors.green,
     'follow_update' => theme.primaryColor,
+    'badge_earned' => Colors.amber.shade700,
+    'daily_reward' => Colors.green,
+    'level_up' => Colors.purple,
+    'season_reward' => Colors.deepOrange,
     'system' => Colors.grey,
     _ => Colors.blueGrey,
   };

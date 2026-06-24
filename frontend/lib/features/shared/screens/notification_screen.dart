@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/services/api_service.dart';
+import '../../../core/constants/api_endpoints.dart';
 import '../../shared/providers/notification_provider.dart';
 import '../../../core/services/auth_provider.dart';
 
@@ -96,6 +97,94 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
+  Future<void> _cleanupNotifications() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Bersihkan Notifikasi?'),
+        content: const Text('Notifikasi yang sudah dibaca (lebih dari 7 hari) akan dihapus permanen.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      final res = await ApiService.delete(ApiEndpoints.notificationCleanup);
+      if (res.success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notifikasi lama berhasil dibersihkan')));
+        _fetchNotifications();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _showPreferences() async {
+    Map<String, bool> prefs = {};
+    try {
+      final res = await ApiService.get(ApiEndpoints.notificationPreferences);
+      if (res.success) {
+        final data = res.data['data'] ?? res.data;
+        if (data is Map) {
+          data.forEach((k, v) {
+            if (v is bool) prefs[k.toString()] = v;
+          });
+        }
+      }
+    } catch (_) {}
+
+    if (!mounted) return;
+
+    final labels = {
+      'tips': 'Tips dari reader',
+      'follows': 'Follower baru',
+      'unlocks': 'Episode di-unlock',
+      'comments': 'Komentar baru',
+      'system': 'Sistem & update',
+      'withdrawals': 'Status penarikan',
+    };
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Pengaturan Notifikasi'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: labels.entries.map((entry) {
+                return SwitchListTile(
+                  dense: true,
+                  title: Text(entry.value, style: const TextStyle(fontSize: 14)),
+                  value: prefs[entry.key] ?? true,
+                  onChanged: (val) {
+                    setDialogState(() => prefs[entry.key] = val);
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await ApiService.put(ApiEndpoints.notificationPreferences, body: prefs.map((k, v) => MapEntry(k, v)));
+                } catch (_) {}
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -109,14 +198,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         actions: [
-          TextButton(
-            onPressed: _isLoading || _notifications.isEmpty
-                ? null
-                : _markAllRead,
-            child: Text(
-              'Mark all read',
-              style: TextStyle(color: theme.primaryColor, fontSize: 12),
-            ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (val) {
+              if (val == 'read_all') _markAllRead();
+              if (val == 'cleanup') _cleanupNotifications();
+              if (val == 'prefs') _showPreferences();
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'read_all', child: Text('Tandai semua dibaca')),
+              const PopupMenuItem(value: 'cleanup', child: Text('Bersihkan notifikasi lama')),
+              const PopupMenuItem(value: 'prefs', child: Text('Pengaturan notifikasi')),
+            ],
           ),
         ],
       ),

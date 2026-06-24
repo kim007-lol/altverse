@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/services/auth_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_constants.dart';
+import 'payment_webview_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -24,16 +25,32 @@ class _WalletScreenState extends State<WalletScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
+
+    final fallbackPackages = [
+      {'id': 'pkg_basic', 'name': 'Basic', 'price_idr': 10000, 'coins': 100, 'bonus': 0},
+      {'id': 'pkg_standard', 'name': 'Standard', 'price_idr': 25000, 'coins': 260, 'bonus': 10},
+      {'id': 'pkg_premium', 'name': 'Premium', 'price_idr': 50000, 'coins': 550, 'bonus': 50},
+      {'id': 'pkg_whale', 'name': 'Whale', 'price_idr': 100000, 'coins': 1150, 'bonus': 150},
+    ];
+
     try {
       final results = await Future.wait([
         ApiService.get(ApiConstants.topupPackages),
         ApiService.get(ApiConstants.topupHistory),
       ]);
       setState(() {
-        _packages = results[0].data?['data'] ?? [];
-        _history = results[1].data?['data'] ?? [];
+        final dataMap = results[0].data as Map<String, dynamic>?;
+        final listData = dataMap?['data'] as List?;
+        _packages = listData?.isNotEmpty == true ? listData! : fallbackPackages;
+        
+        final historyMap = results[1].data as Map<String, dynamic>?;
+        _history = historyMap?['data'] ?? [];
       });
-    } catch (_) {}
+    } catch (_) {
+      setState(() {
+        _packages = fallbackPackages;
+      });
+    }
     setState(() => _isLoading = false);
   }
 
@@ -79,17 +96,29 @@ class _WalletScreenState extends State<WalletScreen> {
       Navigator.pop(context); // Remove loading
 
       if (response.success) {
-        final snapToken = response.data?['snap_token'];
-        if (snapToken != null) {
-          // TODO: Open Midtrans Snap payment page
-          // For now show the redirect URL
-          final redirectUrl = response.data?['redirect_url'];
-          _showPaymentDialog(response.data?['order_id'], redirectUrl);
+        final orderId = response.data?['order_id'] as String?;
+        final redirectUrl = response.data?['redirect_url'] as String?;
+        
+        if (redirectUrl != null && redirectUrl.isNotEmpty) {
+          // Open in-app WebView for payment
+          final didPay = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PaymentWebViewScreen(
+                redirectUrl: redirectUrl,
+                orderId: orderId ?? '-',
+              ),
+            ),
+          );
+
+          if (didPay == true && mounted) {
+            _checkPaymentAndRefresh(orderId);
+          }
         } else {
-          // Midtrans not configured — show info
+          // Midtrans not configured — testing mode
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Midtrans belum dikonfigurasi. Hubungi admin untuk setup.'),
+              content: Text('Mode Testing (Midtrans belum dikonfigurasi)'),
               backgroundColor: Colors.orange,
             ),
           );
@@ -109,37 +138,6 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
-  void _showPaymentDialog(String? orderId, String? redirectUrl) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Pembayaran'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.qr_code_2, size: 80, color: Colors.blue),
-            const SizedBox(height: 16),
-            const Text('Scan QRIS untuk melakukan pembayaran', textAlign: TextAlign.center),
-            const SizedBox(height: 8),
-            Text('Order ID: ${orderId ?? "-"}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-            if (redirectUrl != null) ...[
-              const SizedBox(height: 16),
-              const Text('Pembayaran akan diproses melalui Midtrans', style: TextStyle(fontSize: 12)),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _checkPaymentAndRefresh(orderId);
-            },
-            child: const Text('Sudah Bayar'),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _checkPaymentAndRefresh(String? orderId) async {
     if (orderId == null) return;

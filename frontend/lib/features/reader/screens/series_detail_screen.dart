@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'author_profile_screen.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/auth_provider.dart';
 import '../../../core/constants/api_endpoints.dart';
+import '../../../core/utils/debouncer.dart';
+import '../../shared/widgets/report_dialog.dart';
 import '../widgets/comment_drawer.dart';
 import 'reading_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -29,6 +32,17 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   bool _isFollowing = false;
   bool _synopsisExpanded = false;
 
+  // Paginated episodes state
+  final List<Map<String, dynamic>> _episodes = [];
+  bool _isLoadingEpisodes = false;
+  bool _hasMoreEpisodes = true;
+  int _episodePage = 1;
+
+  // Action guards
+  final ActionGuard _likeGuard = ActionGuard();
+  final ActionGuard _bookmarkGuard = ActionGuard();
+  final ActionGuard _followGuard = ActionGuard();
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +63,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
             _isLoading = false;
             _hasError = false;
           });
+          // Load first page of episodes
+          _loadEpisodes();
         }
       } else {
         if (mounted) {
@@ -68,26 +84,62 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     }
   }
 
+  Future<void> _loadEpisodes() async {
+    if (_isLoadingEpisodes || !_hasMoreEpisodes) return;
+    setState(() => _isLoadingEpisodes = true);
+
+    try {
+      final res = await ApiService.get(
+        'reader/series/${widget.seriesId}/episodes',
+        queryParams: {'page': '$_episodePage'},
+      );
+      if (res.success && mounted) {
+        final data = res.data;
+        final List items = data['data'] ?? [];
+        final int lastPage = data['last_page'] ?? 1;
+        setState(() {
+          _episodes.addAll(items.map((e) => Map<String, dynamic>.from(e)).toList());
+          _hasMoreEpisodes = _episodePage < lastPage;
+          _episodePage++;
+          _isLoadingEpisodes = false;
+        });
+      } else {
+        if (mounted) setState(() => _isLoadingEpisodes = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingEpisodes = false);
+    }
+  }
+
   // ─── Toggle Like ───
   Future<void> _toggleLike() async {
     if (_series == null) return;
-    final wasLiked = _isLiked;
-    final oldCount = _series!['total_likes'] ?? 0;
-    setState(() {
-      _isLiked = !wasLiked;
-      _series!['total_likes'] = wasLiked ? (oldCount > 0 ? oldCount - 1 : 0) : oldCount + 1;
-    });
-    try {
-      final res = await ApiService.post(ApiEndpoints.likeToggle(widget.seriesId), body: {});
-      if (res.success) {
-        final data = res.data;
-        if (mounted) {
-          setState(() {
-            _isLiked = data['liked'] ?? _isLiked;
-            _series!['total_likes'] = data['total_likes'] ?? _series!['total_likes'];
-          });
+    _likeGuard.run(() async {
+      final wasLiked = _isLiked;
+      final oldCount = _series!['total_likes'] ?? 0;
+      setState(() {
+        _isLiked = !wasLiked;
+        _series!['total_likes'] = wasLiked ? (oldCount > 0 ? oldCount - 1 : 0) : oldCount + 1;
+      });
+      try {
+        final res = await ApiService.post(ApiEndpoints.likeToggle(widget.seriesId), body: {});
+        if (res.success) {
+          final data = res.data;
+          if (mounted) {
+            setState(() {
+              _isLiked = data['liked'] ?? _isLiked;
+              _series!['total_likes'] = data['total_likes'] ?? _series!['total_likes'];
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              _isLiked = wasLiked;
+              _series!['total_likes'] = oldCount;
+            });
+          }
         }
-      } else {
+      } catch (_) {
         if (mounted) {
           setState(() {
             _isLiked = wasLiked;
@@ -95,68 +147,65 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           });
         }
       }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _isLiked = wasLiked;
-          _series!['total_likes'] = oldCount;
-        });
-      }
-    }
+    });
   }
 
   // ─── Toggle Bookmark ───
   Future<void> _toggleBookmark() async {
     if (_series == null) return;
-    final was = _isBookmarked;
-    setState(() => _isBookmarked = !was);
-    try {
-      final res = await ApiService.post(ApiEndpoints.bookmarkToggle(widget.seriesId), body: {});
-      if (res.success && mounted) {
-        final data = res.data;
-        setState(() => _isBookmarked = data['bookmarked'] ?? !was);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isBookmarked ? 'Bookmark ditambahkan' : 'Bookmark dihapus'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      } else if (mounted) {
-        setState(() => _isBookmarked = was);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Gagal mengubah bookmark'), backgroundColor: Colors.red));
+    _bookmarkGuard.run(() async {
+      final was = _isBookmarked;
+      setState(() => _isBookmarked = !was);
+      try {
+        final res = await ApiService.post(ApiEndpoints.bookmarkToggle(widget.seriesId), body: {});
+        if (res.success && mounted) {
+          final data = res.data;
+          setState(() => _isBookmarked = data['bookmarked'] ?? !was);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_isBookmarked ? 'Bookmark ditambahkan' : 'Bookmark dihapus'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        } else if (mounted) {
+          setState(() => _isBookmarked = was);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Gagal mengubah bookmark'), backgroundColor: Colors.red));
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() => _isBookmarked = was);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Error: gagal mengubah bookmark'), backgroundColor: Colors.red));
+        }
       }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _isBookmarked = was);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Error: gagal mengubah bookmark'), backgroundColor: Colors.red));
-      }
-    }
+    });
   }
 
   // ─── Toggle Follow Author ───
   Future<void> _toggleFollow() async {
     if (_series == null) return;
-    final authorId = _series!['author']?['id'];
-    if (authorId == null) return;
-    final was = _isFollowing;
-    setState(() => _isFollowing = !was);
-    try {
-      final res = await ApiService.post(ApiEndpoints.followToggle(authorId), body: {});
-      if (res.success) {
-        final data = res.data;
-        if (mounted) {
-          setState(() => _isFollowing = data['following'] ?? _isFollowing);
+    _followGuard.run(() async {
+      final authorId = _series!['author']?['id'];
+      if (authorId == null) return;
+      final was = _isFollowing;
+      setState(() => _isFollowing = !was);
+      try {
+        final res = await ApiService.post(ApiEndpoints.followToggle(authorId), body: {});
+        if (res.success) {
+          final data = res.data;
+          if (mounted) {
+            setState(() => _isFollowing = data['following'] ?? _isFollowing);
+          }
+        } else {
+          if (mounted) setState(() => _isFollowing = was);
         }
-      } else {
+      } catch (_) {
         if (mounted) setState(() => _isFollowing = was);
       }
-    } catch (_) {
-      if (mounted) setState(() => _isFollowing = was);
-    }
+    });
   }
 
   // ─── Support / Donate ───
@@ -393,9 +442,8 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
         // Update local user_coins
         setState(() {
           _series?['user_coins'] = (_series?['user_coins'] ?? 0) - coinPrice;
-          // Mark episode as unlocked in local state
-          final episodes = _series?['episodes'] as List? ?? [];
-          for (var ep in episodes) {
+          // Mark episode as unlocked in local _episodes state
+          for (var ep in _episodes) {
             if (ep['id'] == episodeId) {
               ep['is_unlocked'] = true;
               break;
@@ -459,6 +507,82 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     return n.toString();
   }
 
+  /// Determines the label, icon, and color for a given source URL
+  ({String label, IconData icon, Color color}) _getSourceInfo(String url) {
+    final lower = url.toLowerCase();
+    if (lower.contains('wattpad.com')) {
+      return (label: 'Read on Wattpad', icon: Icons.auto_stories_outlined, color: const Color(0xFFFF6122));
+    } else if (lower.contains('docs.google.com')) {
+      return (label: 'Open Google Docs', icon: Icons.description_outlined, color: const Color(0xFF4285F4));
+    } else if (lower.contains('medium.com')) {
+      return (label: 'Read on Medium', icon: Icons.article_outlined, color: const Color(0xFF00AB6C));
+    } else {
+      return (label: 'Open Source Link', icon: Icons.link, color: Colors.blueGrey);
+    }
+  }
+
+  Widget _buildSourceLinkButton(String url, ThemeData theme) {
+    final info = _getSourceInfo(url);
+    return GestureDetector(
+      onTap: () async {
+        final uri = Uri.parse(url.startsWith('http') ? url : 'https://$url');
+        try {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Gagal membuka link: $e'), backgroundColor: Colors.red),
+            );
+          }
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: info.color.withAlpha(15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: info.color.withAlpha(60)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: info.color.withAlpha(25),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(info.icon, color: info.color, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    info.label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: info.color,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    Uri.tryParse(url)?.host ?? url,
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.open_in_new, size: 18, color: info.color),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -493,7 +617,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
     final theme = Theme.of(context);
     final String coverUrl = ApiService.getImageUrl(_series!['cover_url']);
-    final episodes = _series!['episodes'] as List? ?? [];
+    final episodes = _episodes;
     final author = _series!['author'] ?? {};
     final authorName = author['pen_name'] ?? 'Unknown';
     final authorAvatar = author['author_avatar_url'] != null
@@ -541,6 +665,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                         )
                       : CachedNetworkImage(
                           imageUrl: coverUrl,
+                          memCacheWidth: 800,
                           fit: BoxFit.cover,
                           placeholder: (ctx1, url1) => Container(color: Colors.grey[300]),
                           errorWidget: (ctx2, url2, err) => Container(
@@ -572,9 +697,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                 onSelected: (val) {
                   if (val == 'share') _shareSeries();
                   if (val == 'report') {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(const SnackBar(content: Text('Report sent. Thank you!')));
+                    ReportDialog.show(context, targetType: 'series', targetId: widget.seriesId);
                   }
                 },
                 itemBuilder: (_) => [
@@ -764,6 +887,12 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                         ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+
+                  // ─── Source / Wattpad Link ───
+                  if ((_series!['source_url'] ?? '').toString().isNotEmpty)
+                    _buildSourceLinkButton(_series!['source_url'], theme),
+
                   const SizedBox(height: 20),
 
                   // ─── Episodes Header ───
@@ -771,7 +900,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Episodes (${episodes.length})',
+                        'Episodes (${_series!['episode_count'] ?? episodes.length})',
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -916,6 +1045,27 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                     );
                   }, childCount: episodes.length),
                 ),
+
+          // ─── Load More / Loading Indicator ───
+          if (_hasMoreEpisodes || _isLoadingEpisodes)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: _isLoadingEpisodes
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : TextButton.icon(
+                          onPressed: _loadEpisodes,
+                          icon: const Icon(Icons.expand_more),
+                          label: const Text('Muat episode lainnya'),
+                        ),
+                ),
+              ),
+            ),
 
           const SliverPadding(padding: EdgeInsets.only(bottom: 30)),
         ],

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 import '../constants/api_constants.dart';
 
 class ApiService {
@@ -12,6 +13,13 @@ class ApiService {
 
   static const Duration _timeout = Duration(seconds: 30);
   String? _token;
+
+  /// Callback invoked when a 401 response is received and the session
+  /// cannot be recovered. AuthProvider sets this to trigger a logout.
+  static void Function()? onForceLogout;
+
+  /// In-memory cache for pre-signed image URLs (path → {url, expiry}).
+  static final Map<String, _CachedUrl> _imageUrlCache = {};
 
   Future<void> setToken(String token) async {
     _token = token;
@@ -63,16 +71,48 @@ class ApiService {
 
   // ─── Image URL Helper ───
 
-  /// Constructs a full image URL from a path.
-  /// Uses the backend proxy route /api/v1/public/images/{path} which
-  /// streams images directly from R2/S3 storage.
-  /// If the path is already a full URL, returns it as-is.
+  /// Returns a full image URL served via the Go Image Proxy.
+  ///
+  /// The Go proxy fetches from R2 on first access, then serves from
+  /// an in-memory LRU cache on subsequent requests — much faster than
+  /// streaming through PHP/Laravel.
   static String getImageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
     // Strip leading slash if present
     final cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    return '${ApiConstants.baseUrl}/public/images/$cleanPath';
+    return '${ApiConstants.imageBaseUrl}/images/$cleanPath';
+  }
+
+  /// Fetches a pre-signed GET URL from the backend.
+  /// Cached in-memory for 50 minutes (URLs are valid for 60 min).
+  static Future<String> getPresignedImageUrl(String? path) async {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+
+    final cleanPath = path.startsWith('/') ? path.substring(1) : path;
+
+    // Check cache
+    final cached = _imageUrlCache[cleanPath];
+    if (cached != null && cached.expiry.isAfter(DateTime.now())) {
+      return cached.url;
+    }
+
+    // Fetch from backend
+    try {
+      final res = await get('public/image-url', queryParams: {'path': cleanPath});
+      if (res.success && res.data != null && res.data['url'] != null) {
+        final url = res.data['url'] as String;
+        _imageUrlCache[cleanPath] = _CachedUrl(
+          url: url,
+          expiry: DateTime.now().add(const Duration(minutes: 50)),
+        );
+        return url;
+      }
+    } catch (_) {}
+
+    // Fallback to Go image proxy
+    return '${ApiConstants.imageBaseUrl}/images/$cleanPath';
   }
 
   // ─── Multipart Upload ───
@@ -85,7 +125,8 @@ class ApiService {
     String method = 'POST',
   }) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/$endpoint');
+      final cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+      final uri = Uri.parse('${ApiConstants.baseUrl}/$cleanEndpoint');
       final request = http.MultipartRequest(method, uri);
 
       // Add auth header
@@ -108,7 +149,7 @@ class ApiService {
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      return _instance._handleResponse(response);
+      return await _instance._handleResponse(response);
     } catch (e) {
       return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
     }
@@ -137,16 +178,21 @@ class ApiService {
   }
 
   // ─── Internal Instance Methods ───
+  
+  Uri _buildUri(String endpoint) {
+    final cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    return Uri.parse('${ApiConstants.baseUrl}/$cleanEndpoint');
+  }
 
   Future<ApiResponse> _get(String endpoint, {Map<String, dynamic>? queryParams}) async {
     try {
-      var uri = Uri.parse('${ApiConstants.baseUrl}/$endpoint');
+      var uri = _buildUri(endpoint);
       if (queryParams != null && queryParams.isNotEmpty) {
         uri = uri.replace(queryParameters: queryParams.map((key, value) => MapEntry(key, value.toString())));
       }
 
       final response = await http.get(uri, headers: _headers);
-      return _handleResponse(response);
+      return await _handleResponse(response);
     } catch (e) {
       return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
     }
@@ -154,9 +200,9 @@ class ApiService {
 
   Future<ApiResponse> _post(String endpoint, {Map<String, dynamic>? body}) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/$endpoint');
+      final uri = _buildUri(endpoint);
       final response = await http.post(uri, headers: _headers, body: body != null ? jsonEncode(body) : null);
-      return _handleResponse(response);
+      return await _handleResponse(response);
     } catch (e) {
       return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
     }
@@ -164,11 +210,11 @@ class ApiService {
 
   Future<ApiResponse> _put(String endpoint, {Map<String, dynamic>? body}) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/$endpoint');
+      final uri = _buildUri(endpoint);
       final response = await http
           .put(uri, headers: _headers, body: body != null ? jsonEncode(body) : null)
           .timeout(_timeout);
-      return _handleResponse(response);
+      return await _handleResponse(response);
     } on TimeoutException {
       return ApiResponse(success: false, message: 'Request timeout. Please try again.');
     } catch (e) {
@@ -178,11 +224,11 @@ class ApiService {
 
   Future<ApiResponse> _patch(String endpoint, {Map<String, dynamic>? body}) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/$endpoint');
+      final uri = _buildUri(endpoint);
       final response = await http
           .patch(uri, headers: _headers, body: body != null ? jsonEncode(body) : null)
           .timeout(_timeout);
-      return _handleResponse(response);
+      return await _handleResponse(response);
     } on TimeoutException {
       return ApiResponse(success: false, message: 'Request timeout. Please try again.');
     } catch (e) {
@@ -192,9 +238,9 @@ class ApiService {
 
   Future<ApiResponse> _delete(String endpoint) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/$endpoint');
+      final uri = _buildUri(endpoint);
       final response = await http.delete(uri, headers: _headers).timeout(_timeout);
-      return _handleResponse(response);
+      return await _handleResponse(response);
     } on TimeoutException {
       return ApiResponse(success: false, message: 'Request timeout. Please try again.');
     } catch (e) {
@@ -202,11 +248,17 @@ class ApiService {
     }
   }
 
-  ApiResponse _handleResponse(http.Response response) {
+  Future<ApiResponse> _handleResponse(http.Response response) async {
     final statusCode = response.statusCode;
 
+    // ── 401 Interceptor: trigger force-logout ──
+    if (statusCode == 401 && onForceLogout != null) {
+      // The token is expired or invalid. Notify the app to log out.
+      onForceLogout?.call();
+    }
+
     try {
-      final data = jsonDecode(response.body);
+      final data = await compute(jsonDecode, response.body);
 
       if (statusCode >= 200 && statusCode < 300) {
         return ApiResponse(
@@ -228,6 +280,13 @@ class ApiService {
       return ApiResponse(success: false, message: 'Failed to parse response', statusCode: statusCode);
     }
   }
+}
+
+/// Internal cache entry for pre-signed image URLs.
+class _CachedUrl {
+  final String url;
+  final DateTime expiry;
+  _CachedUrl({required this.url, required this.expiry});
 }
 
 class ApiResponse {
