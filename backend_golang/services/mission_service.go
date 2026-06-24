@@ -218,22 +218,22 @@ func (s *missionService) ClaimReward(userID uint64, missionID uint64) (*ClaimRes
 		return nil, errorhandler.NewNotFound("mission not found")
 	}
 
-	now := time.Now()
-	um.ClaimedAt = &now
-	um.Status = "claimed"
-	if err := s.gamRepo.UpdateUserMission(um); err != nil {
+	// Atomic claim: only the winner of a double-claim race flips claimed_at,
+	// so the reward is granted exactly once.
+	claimed, err := s.gamRepo.ClaimMissionReward(userID, missionID)
+	if err != nil {
 		return nil, errorhandler.NewInternalError("failed to claim reward")
+	}
+	if !claimed {
+		return nil, errorhandler.NewConflict("reward already claimed")
 	}
 
 	if mission.XPReward > 0 {
 		_, _, _ = s.xpSvc.AwardXP(userID, "mission_complete", mission.XPReward)
 	}
 	if mission.CoinReward > 0 {
-		user, err := s.userRepo.FindByID(userID)
-		if err == nil {
-			user.Coins += mission.CoinReward
-			_ = s.userRepo.Update(user)
-		}
+		// Atomic increment avoids the lost-update race of read-modify-write.
+		_ = s.userRepo.AddCoins(userID, mission.CoinReward)
 	}
 
 	return &ClaimResult{XPReward: mission.XPReward, CoinReward: mission.CoinReward}, nil

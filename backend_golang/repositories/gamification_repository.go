@@ -27,6 +27,9 @@ type GamificationRepository interface {
 	GetUserMission(userID, missionID uint64) (*models.UserMission, error)
 	UpsertUserMission(um *models.UserMission) error
 	UpdateUserMission(um *models.UserMission) error
+	// ClaimMissionReward atomically marks a completed-but-unclaimed mission as
+	// claimed; returns false if no row matched (already claimed / not completed).
+	ClaimMissionReward(userID, missionID uint64) (claimed bool, err error)
 	// Seasons
 	GetActiveSeason() (*models.Season, error)
 	GetSeasonXP(userID, seasonID uint64) (*models.SeasonXP, error)
@@ -38,6 +41,19 @@ type gamificationRepository struct{ db *gorm.DB }
 
 func NewGamificationRepository(db *gorm.DB) GamificationRepository {
 	return &gamificationRepository{db: db}
+}
+
+// ClaimMissionReward atomically marks a completed-but-unclaimed mission as
+// claimed. Returns false when no row matched (already claimed or not yet
+// completed), so the caller awards the reward exactly once under a race.
+func (r *gamificationRepository) ClaimMissionReward(userID, missionID uint64) (bool, error) {
+	res := r.db.Model(&models.UserMission{}).
+		Where("user_id = ? AND mission_id = ? AND completed_at IS NOT NULL AND claimed_at IS NULL", userID, missionID).
+		Updates(map[string]any{"claimed_at": gorm.Expr("NOW()"), "status": "claimed"})
+	if res.Error != nil {
+		return false, res.Error
+	}
+	return res.RowsAffected == 1, nil
 }
 
 // ─── XP ────────────────────────────────────────────────────────────────────

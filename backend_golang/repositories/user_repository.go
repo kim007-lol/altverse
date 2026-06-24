@@ -11,6 +11,9 @@ type UserRepository interface {
 	FindByEmail(email string) (*models.User, error)
 	Create(user *models.User) error
 	Update(user *models.User) error
+	// AddCoins atomically increments a user's coin balance, avoiding the
+	// lost-update race of a read-modify-write Save.
+	AddCoins(userID uint64, delta int) error
 	SoftDelete(id uint64) error
 	CreateRefreshToken(token *models.RefreshToken) error
 	FindRefreshToken(jti string) (*models.RefreshToken, error)
@@ -42,6 +45,11 @@ func (r *userRepository) Create(user *models.User) error {
 
 func (r *userRepository) Update(user *models.User) error {
 	return r.db.Save(user).Error
+}
+
+func (r *userRepository) AddCoins(userID uint64, delta int) error {
+	return r.db.Model(&models.User{}).Where("id = ?", userID).
+		UpdateColumn("coins", gorm.Expr("coins + ?", delta)).Error
 }
 
 func (r *userRepository) SoftDelete(id uint64) error {
