@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS soc_reports;
+DROP TABLE IF EXISTS soc_comment_likes;
+DROP TABLE IF EXISTS soc_comments;
+DROP TABLE IF EXISTS soc_episode_likes;
+DROP TABLE IF EXISTS soc_series_likes;
+DROP TABLE IF EXISTS soc_bookmarks;
+DROP TABLE IF EXISTS soc_follows;
+DROP TYPE  IF EXISTS soc_report_status;
+DROP TYPE  IF EXISTS soc_report_target;

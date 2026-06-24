@@ -1,0 +1,12 @@
+DROP TABLE IF EXISTS gam_season_author_earnings;
+DROP TABLE IF EXISTS gam_season_supporters;
+DROP TABLE IF EXISTS gam_season_xp;
+DROP TABLE IF EXISTS gam_seasons;
+DROP TABLE IF EXISTS gam_user_missions;
+DROP TABLE IF EXISTS gam_missions;
+DROP TABLE IF EXISTS gam_user_badges;
+DROP TABLE IF EXISTS gam_badges;
+DROP TABLE IF EXISTS gam_daily_xp_logs;
+DROP TABLE IF EXISTS gam_user_xp;
+DROP TYPE  IF EXISTS gam_mission_status;
+DROP TYPE  IF EXISTS gam_mission_type;
