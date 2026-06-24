@@ -25,7 +25,7 @@ func (h *AuthController) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authSvc.Register(services.RegisterInput{
+	user, pair, err := h.authSvc.Register(services.RegisterInput{
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: req.Password,
@@ -35,7 +35,11 @@ func (h *AuthController) Register(c *gin.Context) {
 		return
 	}
 
-	helper.Created(c, "Registration successful", gin.H{"user": user})
+	helper.Created(c, "Registration successful", gin.H{
+		"user":          user,
+		"access_token":  pair.AccessToken,
+		"refresh_token": pair.RefreshToken,
+	})
 }
 
 func (h *AuthController) Login(c *gin.Context) {

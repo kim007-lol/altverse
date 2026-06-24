@@ -30,7 +30,7 @@ type TokenPair struct {
 }
 
 type AuthService interface {
-	Register(input RegisterInput) (*models.User, error)
+	Register(input RegisterInput) (*models.User, *TokenPair, error)
 	Login(input LoginInput) (*models.User, *TokenPair, error)
 	RefreshTokens(refreshToken string) (*TokenPair, error)
 	Logout(jti string) error
@@ -45,18 +45,18 @@ func NewAuthService(userRepo repositories.UserRepository) AuthService {
 	return &authService{userRepo: userRepo}
 }
 
-func (s *authService) Register(input RegisterInput) (*models.User, error) {
+func (s *authService) Register(input RegisterInput) (*models.User, *TokenPair, error) {
 	_, err := s.userRepo.FindByEmail(input.Email)
 	if err == nil {
-		return nil, errorhandler.NewConflict("email already registered")
+		return nil, nil, errorhandler.NewConflict("email already registered")
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errorhandler.NewInternalError("")
+		return nil, nil, errorhandler.NewInternalError("")
 	}
 
 	hashed, err := helper.HashPassword(input.Password)
 	if err != nil {
-		return nil, errorhandler.NewInternalError("failed to hash password")
+		return nil, nil, errorhandler.NewInternalError("failed to hash password")
 	}
 
 	user := &models.User{
@@ -66,9 +66,15 @@ func (s *authService) Register(input RegisterInput) (*models.User, error) {
 		Role:     "reader",
 	}
 	if err := s.userRepo.Create(user); err != nil {
-		return nil, errorhandler.NewInternalError("failed to create user")
+		return nil, nil, errorhandler.NewInternalError("failed to create user")
 	}
-	return user, nil
+
+	// Issue a token pair so the client is logged in immediately after register.
+	pair, err := s.issueTokenPair(user)
+	if err != nil {
+		return nil, nil, err
+	}
+	return user, pair, nil
 }
 
 func (s *authService) Login(input LoginInput) (*models.User, *TokenPair, error) {
