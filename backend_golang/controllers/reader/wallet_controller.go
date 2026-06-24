@@ -1,6 +1,9 @@
 package reader
 
 import (
+	"crypto/sha512"
+	"crypto/subtle"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -88,9 +91,19 @@ func (h *WalletController) MidtransWebhook(c *gin.Context) {
 		OrderID       string `json:"order_id"`
 		TransactionID string `json:"transaction_id"`
 		Status        string `json:"transaction_status"`
+		StatusCode    string `json:"status_code"`
+		GrossAmount   string `json:"gross_amount"`
+		SignatureKey  string `json:"signature_key"`
 	}
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		helper.BadRequest(c, "invalid payload", nil)
+		return
+	}
+
+	// Verify the Midtrans signature before trusting any status. Without this,
+	// anyone could POST a forged "settlement" for a known order_id and mint coins.
+	if !verifyMidtransSignature(payload.OrderID, payload.StatusCode, payload.GrossAmount, payload.SignatureKey) {
+		helper.Unauthorized(c, "invalid signature")
 		return
 	}
 
@@ -99,6 +112,20 @@ func (h *WalletController) MidtransWebhook(c *gin.Context) {
 		return
 	}
 	helper.NoContent(c, "OK")
+}
+
+// verifyMidtransSignature checks the SHA512 signature Midtrans sends:
+// sha512(order_id + status_code + gross_amount + server_key).
+// If no server key is configured (local dev without Midtrans), verification is
+// skipped so the flow remains testable — but it is always enforced once a key is set.
+func verifyMidtransSignature(orderID, statusCode, grossAmount, signature string) bool {
+	serverKey := config.App.MidtransServerKey
+	if serverKey == "" {
+		return true
+	}
+	sum := sha512.Sum512([]byte(orderID + statusCode + grossAmount + serverKey))
+	expected := hex.EncodeToString(sum[:])
+	return subtle.ConstantTimeCompare([]byte(expected), []byte(signature)) == 1
 }
 
 func (h *WalletController) RequestWithdrawal(c *gin.Context) {
