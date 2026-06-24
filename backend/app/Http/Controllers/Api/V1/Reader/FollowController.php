@@ -113,22 +113,46 @@ class FollowController extends Controller
 
         $user->loadCount(['followers', 'series']);
 
-        // Badges earned by this author
-        $badges = $user->badges()
-            ->select('badges.id', 'key', 'name', 'description', 'icon_url', 'category', 'condition_type', 'condition_value', 'color')
-            ->orderByDesc('condition_value')
-            ->get()
-            ->map(fn($b) => [
-                'id'          => $b->id,
-                'key'         => $b->key,
-                'name'        => $b->name,
-                'description' => $b->description,
-                'icon_url'    => $b->icon_url,
-                'category'    => $b->category,
-                'color'       => $b->color,
-                'earned_at'   => $b->pivot->earned_at,
-                'is_pinned'   => $b->pivot->is_pinned,
-            ]);
+        // Cache the heavy, non-user-specific parts of the profile for 5 minutes
+        $profileData = Cache::remember("author_profile:{$user->id}", 300, function () use ($user) {
+            // Badges earned by this author
+            $badges = $user->badges()
+                ->select('badges.id', 'key', 'name', 'description', 'icon_url', 'category', 'condition_type', 'condition_value', 'color')
+                ->orderByDesc('condition_value')
+                ->get()
+                ->map(fn($b) => [
+                    'id'          => $b->id,
+                    'key'         => $b->key,
+                    'name'        => $b->name,
+                    'description' => $b->description,
+                    'icon_url'    => $b->icon_url,
+                    'category'    => $b->category,
+                    'color'       => $b->color,
+                    'earned_at'   => $b->pivot->earned_at,
+                    'is_pinned'   => $b->pivot->is_pinned,
+                ]);
+
+            // Top 5 supporters
+            $topSupporters = AuthorSupportTotal::where('author_id', $user->id)
+                ->with('user:id,name,pen_name,avatar_url')
+                ->orderByDesc('total_spend')
+                ->limit(5)
+                ->get()
+                ->map(fn($s) => [
+                    'user'        => $s->user?->only(['id', 'name', 'pen_name', 'avatar_url']),
+                    'total_spend' => $s->total_spend,
+                ]);
+
+            // Series
+            $series = $user->series()
+                ->where('status', 'published')
+                ->withCount('episodes')
+                ->latest()
+                ->limit(20)
+                ->get();
+
+            return compact('badges', 'topSupporters', 'series');
+        });
 
         // Highest follower badge
         $highestBadge = BadgeService::getHighestFollowerBadge($user);
@@ -139,27 +163,18 @@ class FollowController extends Controller
             $isFollowing = $request->user()->following()->where('following_id', $user->id)->exists();
         }
 
-        // Top 5 supporters
-        $topSupporters = AuthorSupportTotal::where('author_id', $user->id)
-            ->with('user:id,name,pen_name,avatar_url')
-            ->orderByDesc('total_spend')
-            ->limit(5)
-            ->get()
-            ->map(fn($s) => [
-                'user'        => $s->user?->only(['id', 'name', 'pen_name', 'avatar_url']),
-                'total_spend' => $s->total_spend,
-            ]);
-
         // Is the viewer looking at their own author profile?
         $isSelf = $request->user() && $request->user()->id === $user->id;
 
         return response()->json([
             'author' => array_merge($user->only([
                 'id',
+                'username',
                 'name',
                 'pen_name',
                 'avatar_url',
                 'author_avatar_url',
+                'author_banner_url',
                 'bio',
                 'author_bio',
                 'social_links',
@@ -177,16 +192,11 @@ class FollowController extends Controller
                     'color' => $highestBadge->color,
                 ] : null,
             ]),
-            'badges'         => $badges,
+            'badges'         => $profileData['badges'],
             'is_following'   => $isFollowing,
             'is_self'        => $isSelf,
-            'top_supporters' => $topSupporters,
-            'series'         => $user->series()
-                ->where('status', 'published')
-                ->withCount('episodes')
-                ->latest()
-                ->limit(20)
-                ->get(),
+            'top_supporters' => $profileData['topSupporters'],
+            'series'         => $profileData['series'],
         ]);
     }
 }

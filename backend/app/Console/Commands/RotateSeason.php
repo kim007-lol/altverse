@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Badge;
 use App\Models\Transaction;
 use App\Models\Notification;
+use App\Services\BadgeService;
 use Illuminate\Support\Str;
 
 class RotateSeason extends Command
@@ -85,6 +86,11 @@ class RotateSeason extends Command
                 'description' => "Top XP #{$rank}: {$activeSeason->name} (+{$reward['coins']} coins)",
             ]);
 
+            // Award season XP badge (Top 3 only)
+            if ($rank <= 3) {
+                BadgeService::awardBadge($user, "season_top_xp_{$rank}");
+            }
+
             // Send notification
             Notification::create([
                 'id'      => Str::uuid(),
@@ -118,6 +124,9 @@ class RotateSeason extends Command
             // Update rank in the table for historical record
             $entry->update(['rank' => $rank]);
 
+            // Award season supporter badge
+            BadgeService::awardBadge($user, "season_top_supporter_{$rank}");
+
             // Send notification
             Notification::create([
                 'id'      => Str::uuid(),
@@ -149,6 +158,9 @@ class RotateSeason extends Command
 
             // Update rank in the table for historical record
             $entry->update(['rank' => $rank]);
+
+            // Award season author badge
+            BadgeService::awardBadge($author, "season_top_author_{$rank}");
 
             // Send notification
             Notification::create([

@@ -178,8 +178,8 @@ class SeriesController extends Controller
         abort_if($series->author_id !== $request->user()->id, 403);
 
         // Delete cover from R2 if exists
-        if ($series->cover_url) {
-            Storage::disk('s3')->delete($series->cover_url);
+        if ($series->getRawOriginal('cover_url')) {
+            Storage::disk('s3')->delete($series->getRawOriginal('cover_url'));
         }
 
         $series->delete(); // soft-delete karena ada softDeletes di migration

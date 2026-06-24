@@ -22,8 +22,14 @@ class MidtransWebhookController extends Controller
 
         Log::info('Midtrans Webhook received', $data);
 
+        // Server key is REQUIRED for webhook validation — reject if not configured
+        $serverKey = config('services.midtrans.server_key');
+        if (!$serverKey) {
+            Log::error('Midtrans Webhook: Server key not configured. Rejecting request.');
+            return response()->json(['message' => 'Payment gateway not configured'], 503);
+        }
+
         // Verify signature
-        $serverKey     = config('services.midtrans.server_key');
         $orderId       = $data['order_id'] ?? '';
         $statusCode    = $data['status_code'] ?? '';
         $grossAmount   = $data['gross_amount'] ?? '';
@@ -31,7 +37,7 @@ class MidtransWebhookController extends Controller
 
         $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
 
-        if ($serverKey && $signatureKey !== $expectedSignature) {
+        if ($signatureKey !== $expectedSignature) {
             Log::warning('Midtrans Webhook: Invalid signature', [
                 'order_id' => $orderId,
                 'expected' => $expectedSignature,
@@ -48,6 +54,18 @@ class MidtransWebhookController extends Controller
             return response()->json(['message' => 'Order not found'], 404);
         }
 
+        // Verify gross_amount matches the expected price
+        $receivedAmount = floatval($grossAmount);
+        if ($receivedAmount < $topUp->amount_idr) {
+            Log::warning('Midtrans Webhook: gross_amount mismatch', [
+                'order_id'        => $orderId,
+                'expected_amount' => $topUp->amount_idr,
+                'received_amount' => $receivedAmount,
+            ]);
+            $topUp->update(['status' => 'failed']);
+            return response()->json(['message' => 'Amount mismatch'], 400);
+        }
+
         $transactionStatus = $data['transaction_status'] ?? '';
         $fraudStatus       = $data['fraud_status'] ?? 'accept';
 
@@ -56,6 +74,11 @@ class MidtransWebhookController extends Controller
             if ($fraudStatus === 'accept') {
                 TopUpController::processPayment($topUp, $data);
                 Log::info("Midtrans Webhook: Payment SUCCESS for {$orderId}");
+            } else {
+                Log::warning("Midtrans Webhook: Payment flagged as fraud for {$orderId}", [
+                    'fraud_status' => $fraudStatus,
+                ]);
+                $topUp->update(['status' => 'failed']);
             }
         } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire'])) {
             $topUp->update(['status' => $transactionStatus === 'expire' ? 'expired' : 'failed']);

@@ -118,7 +118,7 @@ class EpisodeController extends Controller
 
         // Delete all page images from R2
         foreach ($episode->pages as $page) {
-            \Illuminate\Support\Facades\Storage::disk('s3')->delete($page->image_path);
+            \Illuminate\Support\Facades\Storage::disk('s3')->delete($page->getRawOriginal('image_path'));
         }
 
         $episode->pages()->delete();

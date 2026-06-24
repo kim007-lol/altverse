@@ -20,17 +20,21 @@ class AuthController extends Controller
     {
         try {
             $validated = $request->validate([
-                'name'     => ['required', 'string', 'min:2', 'max:255', 'unique:users,name'],
+                'username' => ['required', 'string', 'min:3', 'max:30', 'regex:/^[a-z0-9_]+$/', 'unique:users,username'],
+                'name'     => ['required', 'string', 'min:2', 'max:255'],
                 'email'    => ['required', 'email:rfc,dns', 'unique:users,email', 'max:255'],
                 'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
                 'role'     => ['required', 'in:reader,author'],
-                'pen_name' => ['nullable', 'required_if:role,author', 'string', 'min:2', 'max:255', 'unique:users,pen_name'],
+                'pen_name' => ['nullable', 'required_if:role,author', 'string', 'min:2', 'max:255'],
                 'bio'      => ['nullable', 'string', 'max:1000'],
             ], [
-                // Pesan error kustom bahasa Indonesia
+                'username.required'       => 'Username wajib diisi.',
+                'username.min'            => 'Username minimal 3 karakter.',
+                'username.max'            => 'Username maksimal 30 karakter.',
+                'username.regex'          => 'Username hanya boleh huruf kecil, angka, dan underscore.',
+                'username.unique'         => 'Username ini sudah digunakan.',
                 'name.required'           => 'Nama wajib diisi.',
-                'name.min'                => 'Nama minimal 2 karakter.',
-                'name.unique'             => 'Nama (Username) ini sudah digunakan.',
+                'name.min'               => 'Nama minimal 2 karakter.',
                 'email.required'          => 'Email wajib diisi.',
                 'email.email'             => 'Format email tidak valid.',
                 'email.unique'            => 'Email ini sudah terdaftar.',
@@ -41,7 +45,6 @@ class AuthController extends Controller
                 'role.in'                 => 'Role harus reader atau author.',
                 'pen_name.required_if'    => 'Pen Name wajib diisi untuk Author.',
                 'pen_name.min'            => 'Pen Name minimal 2 karakter.',
-                'pen_name.unique'         => 'Pen Name ini sudah digunakan oleh author lain.',
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -51,6 +54,7 @@ class AuthController extends Controller
         }
 
         $user = User::create([
+            'username' => $validated['username'],
             'name'     => $validated['name'],
             'email'    => $validated['email'],
             'password' => $validated['password'],
@@ -67,7 +71,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Registrasi berhasil',
-            'user'    => $user->only(['id', 'name', 'email', 'role', 'pen_name', 'coins']),
+            'user'    => $user->only(['id', 'username', 'name', 'email', 'role', 'pen_name', 'coins']),
             'token'   => $token,
         ], 201);
     }
@@ -111,7 +115,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login berhasil',
-            'user'    => $user->only(['id', 'name', 'email', 'role', 'pen_name', 'avatar_url', 'author_avatar_url', 'coins', 'level', 'author_tier', 'theme_preference', 'theme_color']),
+            'user'    => $user->only(['id', 'username', 'name', 'email', 'role', 'pen_name', 'avatar_url', 'author_avatar_url', 'coins', 'level', 'author_tier', 'theme_preference', 'theme_color']),
             'token'   => $token,
             'has_reader_profile' => !empty($user->name),
             'has_author_profile' => !empty($user->pen_name),
@@ -137,6 +141,7 @@ class AuthController extends Controller
 
         $fields = [
             'id',
+            'username',
             'name',
             'email',
             'role',
@@ -256,20 +261,7 @@ class AuthController extends Controller
         $user = $request->user();
         $isAuthor = $user->role === 'author';
 
-        // Pre-process JSON string from multipart into array
-        if ($request->has('social_links') && is_string($request->input('social_links'))) {
-            $decoded = json_decode($request->input('social_links'), true);
-            if ($decoded !== null) {
-                $request->merge(['social_links' => $decoded]);
-            }
-        }
-
-        if ($request->has('author_social_links') && is_string($request->input('author_social_links'))) {
-            $decoded = json_decode($request->input('author_social_links'), true);
-            if ($decoded !== null) {
-                $request->merge(['author_social_links' => $decoded]);
-            }
-        }
+        // social_links JSON decoding is now handled by UpdateProfileRequest::prepareForValidation()
 
         $validated = $request->validated();
 
@@ -295,16 +287,13 @@ class AuthController extends Controller
             unset($validated['social_links']);
         }
 
-        // Guard: strictly allow only role-appropriate fields
-        $readerOnlyFields = ['name', 'bio', 'avatar_url', 'social_links'];
+        // Guard: allow both reader and author fields
+        // The frontend already sends only role-appropriate fields for the profile being edited
+        $readerOnlyFields = ['username', 'name', 'bio', 'avatar_url', 'social_links'];
         $authorOnlyFields = ['pen_name', 'author_bio', 'author_avatar_url', 'author_social_links'];
         $sharedFields     = ['theme_preference', 'theme_color'];
 
-        if ($isAuthor) {
-            $allowedFields = array_merge($authorOnlyFields, $sharedFields);
-        } else {
-            $allowedFields = array_merge($readerOnlyFields, $sharedFields);
-        }
+        $allowedFields = array_merge($readerOnlyFields, $authorOnlyFields, $sharedFields);
 
         $filteredData = \Illuminate\Support\Arr::only($validated, $allowedFields);
 
@@ -320,6 +309,7 @@ class AuthController extends Controller
             'message' => 'Profil berhasil diperbarui',
             'user'    => $freshUser->only([
                 'id',
+                'username',
                 'name',
                 'email',
                 'role',

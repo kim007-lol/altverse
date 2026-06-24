@@ -50,8 +50,8 @@ class RecalculateAuthorTierJob implements ShouldQueue
             $user->update([
                 'author_tier'          => $newTier,
                 'tier_updated_at'      => now(),
-                'can_customize_banner' => in_array($newTier, ['silver', 'gold', 'popular']),
-                'can_tip'              => in_array($newTier, ['gold', 'popular']),
+                'can_customize_banner' => in_array($newTier, ['silver', 'gold', 'diamond', 'popular']),
+                'can_tip'              => in_array($newTier, ['gold', 'diamond', 'popular']),
                 'is_verified'          => $newTier === 'popular' ? true : $user->is_verified,
             ]);
 
@@ -80,13 +80,16 @@ class RecalculateAuthorTierJob implements ShouldQueue
 
     private function determineTier(int $followers, int $views, int $episodes, bool $hasArchived): string
     {
-        if ($followers >= 10000 && $hasArchived) {
+        if ($followers >= 7000 && $views >= 10000) {
             return 'popular';
         }
-        if ($followers >= 1000 && $views >= 50000) {
+        if ($followers >= 2000 && $views >= 5000) {
+            return 'diamond';
+        }
+        if ($followers >= 500 && $views >= 1000) {
             return 'gold';
         }
-        if ($followers >= 100 && $episodes >= 5) {
+        if ($followers >= 100 && $views >= 100) {
             return 'silver';
         }
         return 'bronze';

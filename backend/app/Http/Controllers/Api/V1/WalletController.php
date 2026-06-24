@@ -8,6 +8,7 @@ use App\Models\Badge;
 use App\Models\Notification;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\BadgeService;
 use App\Services\XpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,70 +41,78 @@ class WalletController extends Controller
      */
     public function claimDailyReward(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $userId = $request->user()->id;
 
-        $claimedToday = $user->transactions()
-            ->where('type', 'daily_reward')
-            ->whereDate('created_at', today())
-            ->exists();
+        return DB::transaction(function () use ($userId) {
+            // Lock user row to prevent concurrent claims
+            $user = User::lockForUpdate()->find($userId);
 
-        if ($claimedToday) {
-            return response()->json(['message' => 'Kamu sudah klaim reward hari ini'], 422);
-        }
+            $claimedToday = $user->transactions()
+                ->where('type', 'daily_reward')
+                ->whereDate('created_at', today())
+                ->exists();
 
-        $streak = 1;
-        $checkDate = today()->subDay();
-        while ($user->transactions()->where('type', 'daily_reward')->whereDate('created_at', $checkDate)->exists()) {
-            $streak++;
-            $checkDate = $checkDate->subDay();
-        }
+            if ($claimedToday) {
+                return response()->json(['message' => 'Kamu sudah klaim reward hari ini'], 422);
+            }
 
-        $rewardXp = $streak * 10;
+            $streak = 1;
+            $checkDate = today()->subDay();
+            while ($user->transactions()->where('type', 'daily_reward')->whereDate('created_at', $checkDate)->exists()) {
+                $streak++;
+                $checkDate = $checkDate->subDay();
+            }
 
-        // Record XP
-        $xpRecord = \App\Models\UserXp::firstOrCreate(
-            ['user_id' => $user->id],
-            ['total_xp' => 0, 'level' => 0]
-        );
-        $xpRecord->increment('total_xp', $rewardXp);
-        $newLevel = \App\Models\UserXp::calculateLevel($xpRecord->total_xp);
-        if ($xpRecord->level !== $newLevel) {
-            $xpRecord->update(['level' => $newLevel]);
-        }
+            $rewardXp = $streak * 10;
 
-        // Add season global XP
-        $season = \App\Models\Season::active()->first();
-        if ($season) {
-            \App\Models\UserSeasonGlobal::updateOrCreate(
-                ['user_id' => $user->id, 'season_id' => $season->id],
-                []
-            )->increment('xp', $rewardXp);
-            Cache::forget("leaderboard:xp:{$season->id}");
-        }
+            // Record XP
+            $xpRecord = \App\Models\UserXp::firstOrCreate(
+                ['user_id' => $user->id],
+                ['total_xp' => 0, 'level' => 0]
+            );
+            $xpRecord->increment('total_xp', $rewardXp);
+            $newLevel = \App\Models\UserXp::calculateLevel($xpRecord->total_xp);
+            if ($xpRecord->level !== $newLevel) {
+                $xpRecord->update(['level' => $newLevel]);
+            }
 
-        Transaction::create([
-            'user_id'     => $user->id,
-            'type'        => 'daily_reward',
-            'amount'      => 0, // 0 coins
-            'description' => "Daily reward hari ke-{$streak} (+{$rewardXp} XP)",
-        ]);
+            // Add season global XP
+            $season = \App\Models\Season::active()->first();
+            if ($season) {
+                \App\Models\UserSeasonGlobal::updateOrCreate(
+                    ['user_id' => $user->id, 'season_id' => $season->id],
+                    []
+                )->increment('xp', $rewardXp);
+                Cache::forget("leaderboard:xp:{$season->id}");
+            }
 
-        Notification::create([
-            'id'      => Str::uuid(),
-            'user_id' => $user->id,
-            'type'    => 'daily_reward',
-            'title'   => 'Reward Harian Diklaim!',
-            'body'    => "Kamu mendapat {$rewardXp} XP (streak: {$streak} hari)",
-        ]);
+            Transaction::create([
+                'user_id'     => $user->id,
+                'type'        => 'daily_reward',
+                'amount'      => 0, // 0 coins
+                'description' => "Daily reward hari ke-{$streak} (+{$rewardXp} XP)",
+            ]);
 
-        return response()->json([
-            'message'      => 'Daily reward berhasil diklaim!',
-            'xp_earned'    => $rewardXp,
-            'coins_earned' => 0,
-            'streak'       => $streak,
-            'total_xp'     => $xpRecord->fresh()->total_xp,
-            'total_coins'  => $user->fresh()->coins,
-        ]);
+            // Award streak badge if user has maintained 7+ day streak
+            BadgeService::checkStreakBadge($user, $streak);
+
+            Notification::create([
+                'id'      => Str::uuid(),
+                'user_id' => $user->id,
+                'type'    => 'daily_reward',
+                'title'   => 'Reward Harian Diklaim!',
+                'body'    => "Kamu mendapat {$rewardXp} XP (streak: {$streak} hari)",
+            ]);
+
+            return response()->json([
+                'message'      => 'Daily reward berhasil diklaim!',
+                'xp_earned'    => $rewardXp,
+                'coins_earned' => 0,
+                'streak'       => $streak,
+                'total_xp'     => $xpRecord->fresh()->total_xp,
+                'total_coins'  => $user->fresh()->coins,
+            ]);
+        });
     }
 
     /**
@@ -118,9 +127,10 @@ class WalletController extends Controller
 
         $user = $request->user();
 
-        // Validate target is actually an author
+        // Validate target is actually an author (has a pen_name)
+        // Note: we don't check $targetUser->role === 'author' because they might be currently in 'reader' mode.
         $targetUser = User::find($validated['author_id']);
-        if (!$targetUser || $targetUser->role !== 'author') {
+        if (!$targetUser || empty($targetUser->pen_name)) {
             return response()->json(['message' => 'Hanya bisa mengirim tip ke Author'], 422);
         }
 
@@ -157,7 +167,7 @@ class WalletController extends Controller
                     'user_id'            => $lockedUser->id,
                     'type'               => 'tip_sent',
                     'amount'             => -$validated['amount'],
-                    'description'        => 'Tip ke ' . ($author->role === 'author' ? $author->pen_name : $author->name),
+                    'description'        => 'Tip ke ' . $author->pen_name,
                     'related_user_id'    => $author->id,
                     'related_series_id'  => $validated['series_id'] ?? null,
                 ]);
@@ -193,12 +203,8 @@ class WalletController extends Controller
         // Track spending for Top Supporter & Top Author leaderboards (NO XP)
         XpService::trackSeasonSpending($user->id, (int) $validated['author_id'], $validated['amount']);
 
-        // Check spend badges
-        \App\Services\BadgeService::checkAndAwardBadges($user);
-
-        // Track mission progress for spending coins
-        $missionService = app(\App\Services\MissionService::class);
-        $missionService->autoTrack($user, 'spend_coins');
+        // Dispatch badge/mission checks to background job
+        \App\Jobs\ProcessGamificationJob::dispatch($user->id, 'spend_coins');
 
         return response()->json([
             'message'     => 'Tip berhasil dikirim!',
@@ -212,12 +218,34 @@ class WalletController extends Controller
     {
         $user = $request->user();
 
-        $earnedBadges = $user->badges()->get();
-        $allBadges = Badge::where('category', $user->role)->get();
+        // Get all earned badge IDs with their pivot data
+        $earnedData = $user->badges()
+            ->get()
+            ->keyBy('id')
+            ->map(fn($b) => [
+                'earned_at' => $b->pivot->earned_at,
+                'is_pinned' => (bool) $b->pivot->is_pinned,
+            ]);
+
+        // Get ALL badges (not filtered by role) and merge earned_at info
+        $allBadges = Badge::all()->map(function ($badge) use ($earnedData) {
+            $data = $earnedData->get($badge->id);
+            return [
+                'id'          => $badge->id,
+                'key'         => $badge->key,
+                'name'        => $badge->name,
+                'description' => $badge->description,
+                'icon'        => $badge->icon_url,
+                'icon_url'    => $badge->icon_url,
+                'category'    => $badge->category,
+                'color'       => $badge->color,
+                'earned_at'   => $data ? $data['earned_at'] : null,
+                'is_pinned'   => $data ? $data['is_pinned'] : false,
+            ];
+        });
 
         return response()->json([
-            'earned' => $earnedBadges,
-            'all'    => $allBadges,
+            'badges' => $allBadges->values(),
         ]);
     }
 
@@ -290,9 +318,10 @@ class WalletController extends Controller
         $tier = $user->author_tier ?? 'bronze';
 
         $tiers = [
-            'silver'  => ['followers' => 100, 'published_episodes' => 5],
-            'gold'    => ['followers' => 1000, 'total_views' => 50000],
-            'popular' => ['followers' => 10000, 'has_archived_series' => true],
+            'silver'  => ['followers' => 100, 'total_views' => 100],
+            'gold'    => ['followers' => 500, 'total_views' => 1000],
+            'diamond' => ['followers' => 2000, 'total_views' => 5000],
+            'popular' => ['followers' => 7000, 'total_views' => 10000],
         ];
 
         $current = [
@@ -306,6 +335,7 @@ class WalletController extends Controller
             'bronze'  => [],
             'silver'  => ['can_customize_banner'],
             'gold'    => ['can_customize_banner', 'can_tip'],
+            'diamond' => ['can_customize_banner', 'can_tip'],
             'popular' => ['can_customize_banner', 'can_tip', 'is_verified'],
         ];
 

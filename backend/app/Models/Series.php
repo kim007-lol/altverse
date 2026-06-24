@@ -28,6 +28,17 @@ class Series extends Model
         'total_likes',
     ];
 
+    public function getCoverUrlAttribute($value)
+    {
+        if (!$value) return null;
+        if (str_starts_with($value, 'http')) return $value;
+        try {
+            return \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($value, now()->addMinutes(60));
+        } catch (\Exception $e) {
+            return url("api/v1/public/images/" . ltrim($value, '/'));
+        }
+    }
+
     public function author()
     {
         return $this->belongsTo(User::class, 'author_id');

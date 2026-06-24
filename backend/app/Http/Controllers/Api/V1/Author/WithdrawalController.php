@@ -34,8 +34,8 @@ class WithdrawalController extends Controller
         $user = $request->user();
         $amountCoins = $request->amount_coins;
 
-        // Platform Exchange Rate: 1 Coin = Rp 70
-        $exchangeRate = 70;
+        // Platform Exchange Rate: 1 Coin = Rp 80 (80% Author, 20% Platform)
+        $exchangeRate = 80;
         $amountIdr = $amountCoins * $exchangeRate;
 
         try {
@@ -58,7 +58,7 @@ class WithdrawalController extends Controller
                 ]);
 
                 // Create Withdrawal Request
-                Withdrawal::create([
+                $withdrawal = Withdrawal::create([
                     'user_id' => $lockedUser->id,
                     'amount_coins' => $amountCoins,
                     'amount_idr' => $amountIdr,
@@ -67,6 +67,31 @@ class WithdrawalController extends Controller
                     'bank_account_number' => $request->bank_account_number,
                     'bank_account_name' => $request->bank_account_name,
                 ]);
+
+                // Transfer the coins to Admin account for transparency
+                $adminUser = \App\Models\User::where('email', 'admin@aureader.com')->first();
+                if ($adminUser) {
+                    $adminLocked = \App\Models\User::lockForUpdate()->find($adminUser->id);
+                    $adminLocked->increment('coins', $amountCoins);
+
+                    Transaction::create([
+                        'user_id' => $adminLocked->id,
+                        'type' => 'withdrawal_received',
+                        'amount' => $amountCoins,
+                        'description' => "Penarikan koin masuk dari Author: " . ($lockedUser->pen_name ?? $lockedUser->name),
+                        'related_user_id' => $lockedUser->id,
+                    ]);
+
+                    \App\Models\Notification::create([
+                        'id' => \Illuminate\Support\Str::uuid(),
+                        'user_id' => $adminLocked->id,
+                        'type' => 'withdrawal_received',
+                        'target_role' => 'reader', // Admin bisa melihatnya di mode reader
+                        'title' => 'Permintaan Penarikan Dana Baru',
+                        'body' => ($lockedUser->pen_name ?? $lockedUser->name) . " mengajukan penarikan {$amountCoins} Koin (Rp " . number_format($amountIdr, 0, ',', '.') . ").",
+                        'data' => ['withdrawal_id' => $withdrawal->id, 'author_id' => $lockedUser->id],
+                    ]);
+                }
             });
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);

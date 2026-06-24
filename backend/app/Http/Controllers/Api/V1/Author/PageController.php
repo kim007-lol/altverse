@@ -129,7 +129,7 @@ class PageController extends Controller
             'image_path' => 'required|string',
         ]);
 
-        $oldPath = $page->image_path;
+        $oldPath = $page->getRawOriginal('image_path');
 
         $page->update([
             'image_path' => $request->image_path,
@@ -187,7 +187,7 @@ class PageController extends Controller
 
         $episodeId = $page->episode_id;
         $order = $page->page_order;
-        $imagePath = $page->image_path;
+        $imagePath = $page->getRawOriginal('image_path');
 
         DB::transaction(function () use ($page, $episodeId, $order) {
             $page->delete();

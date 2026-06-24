@@ -15,9 +15,10 @@ class AuthorOnly
     {
         $user = $request->user();
 
-        if ($user && $user->role !== 'author') {
+        // Menggunakan Aturan Emas: Cek kepemilikan pen_name, bukan sekadar role aktif.
+        if ($user && empty($user->pen_name)) {
             return response()->json([
-                'message' => 'Fitur ini hanya tersedia untuk Author. Silakan switch ke Author terlebih dahulu.',
+                'message' => 'Fitur ini hanya tersedia untuk Author. Silakan buat profil Author terlebih dahulu.',
             ], 403);
         }
 

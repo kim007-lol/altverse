@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'reader-only' => \App\Http\Middleware\ReaderOnly::class,
             'author-only' => \App\Http\Middleware\AuthorOnly::class,
+            'admin-only' => \App\Http\Middleware\AdminOnly::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

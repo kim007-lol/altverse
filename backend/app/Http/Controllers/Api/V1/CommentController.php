@@ -144,13 +144,9 @@ class CommentController extends Controller
             }
         ]);
 
-        // Award XP and track mission progress
+        // Award XP immediately, dispatch mission/badge tracking to background
         XpService::award($user->id, 'comment');
-        $missionService = app(\App\Services\MissionService::class);
-        $missionService->autoTrack($user, 'comment');
-
-        // Check for "first_comment" badge
-        \App\Services\BadgeService::checkFirstCommentBadge($user);
+        \App\Jobs\ProcessGamificationJob::dispatch($user->id, 'comment');
 
         // Notify author
         $series = $episode->series;
@@ -180,75 +176,66 @@ class CommentController extends Controller
 
     /**
      * Toggle like on a comment + recalculate priority_score.
-     *
-     * SECURITY: Uses DB::transaction + lockForUpdate to prevent TOCTOU race condition.
-     * - Locks comment row so concurrent requests are serialized
-     * - Uses is_active toggle (NOT delete/create) to preserve XP award history
-     * - Max 30 likes per day per user (prevents alt-account collusion at scale)
+     * Uses optimistic approach: atomic increment/decrement without row locking.
+     * Rate limited to max 30 likes per day per user.
      */
     public function toggleLike(Request $request, Comment $comment): JsonResponse
     {
         $user = $request->user();
 
-        $result = DB::transaction(function () use ($user, $comment) {
-            // Lock comment row — concurrent requests will queue here
-            $lockedComment = Comment::lockForUpdate()->find($comment->id);
+        // Find existing record (active or inactive)
+        $existingLike = CommentLike::where('user_id', $user->id)
+            ->where('comment_id', $comment->id)
+            ->first();
 
-            // Find existing record (active or inactive)
-            $existingLike = CommentLike::where('user_id', $user->id)
-                ->where('comment_id', $lockedComment->id)
-                ->lockForUpdate()
-                ->first();
-
-            if ($existingLike && $existingLike->is_active) {
-                // ── Unlike ──
-                $existingLike->update(['is_active' => false]);
-                $lockedComment->likes_count = max(0, $lockedComment->likes_count - 1);
-                $lockedComment->save();
-
-                return ['liked' => false, 'likes_count' => $lockedComment->likes_count];
+        if ($existingLike && $existingLike->is_active) {
+            // ── Unlike ──
+            $existingLike->update(['is_active' => false]);
+            $comment->decrement('likes_count');
+            if ($comment->fresh()->likes_count < 0) {
+                $comment->update(['likes_count' => 0]);
             }
 
-            // ── Like (new or re-activate) ──
+            return response()->json(['liked' => false, 'likes_count' => max(0, $comment->fresh()->likes_count)]);
+        }
 
-            // Rate limit: max 30 likes per day per user
-            $todayLikeCount = CommentLike::where('user_id', $user->id)
-                ->where('is_active', true)
-                ->whereDate('created_at', now()->toDateString())
-                ->count();
+        // ── Like (new or re-activate) ──
 
-            if ($todayLikeCount >= 30) {
-                throw new \Exception('RATE_LIMIT');
-            }
+        // Rate limit: max 30 likes per day per user
+        $todayLikeCount = CommentLike::where('user_id', $user->id)
+            ->where('is_active', true)
+            ->whereDate('created_at', now()->toDateString())
+            ->count();
 
-            if ($existingLike) {
-                $existingLike->update(['is_active' => true]);
-            } else {
-                CommentLike::create([
-                    'user_id'    => $user->id,
-                    'comment_id' => $lockedComment->id,
-                    'xp_awarded' => ($lockedComment->user_id !== $user->id),
-                    'is_active'  => true,
-                ]);
-            }
+        if ($todayLikeCount >= 30) {
+            return response()->json(['message' => 'Batas like harian tercapai (30 per hari)'], 429);
+        }
 
-            $lockedComment->increment('likes_count');
-            $lockedComment->refresh();
+        if ($existingLike) {
+            $existingLike->update(['is_active' => true]);
+        } else {
+            CommentLike::create([
+                'user_id'    => $user->id,
+                'comment_id' => $comment->id,
+                'xp_awarded' => ($comment->user_id !== $user->id),
+                'is_active'  => true,
+            ]);
+        }
 
-            // Recalculate priority score
-            $commentXp = UserXp::find($lockedComment->user_id);
-            $commentLevel = $commentXp?->level ?? 0;
-            $commentWeight = $lockedComment->user?->supporterLevel?->weight ?? 0;
+        $comment->increment('likes_count');
+        $comment->refresh();
 
-            $lockedComment->priority_score = ($lockedComment->likes_count * 2)
-                + ($commentLevel * 1.5)
-                + $commentWeight;
-            $lockedComment->save();
+        // Recalculate priority score
+        $commentXp = UserXp::find($comment->user_id);
+        $commentLevel = $commentXp->level ?? 0;
+        $commentWeight = $comment->user?->supporterLevel?->weight ?? 0;
 
-            return ['liked' => true, 'likes_count' => $lockedComment->likes_count];
-        });
+        $comment->priority_score = ($comment->likes_count * 2)
+            + ($commentLevel * 1.5)
+            + $commentWeight;
+        $comment->save();
 
-        return response()->json($result);
+        return response()->json(['liked' => true, 'likes_count' => $comment->likes_count]);
     }
 
     /** Delete own comment */

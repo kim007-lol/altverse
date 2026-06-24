@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\TopUp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class TopUpController extends Controller
 {
@@ -13,7 +16,7 @@ class TopUpController extends Controller
      * Coin packages available for purchase.
      * 1 Coin = Rp 100 (base rate)
      */
-    private const PACKAGES = [
+    public const PACKAGES = [
         'pkg_basic'    => ['name' => 'Basic',    'price_idr' => 10000,  'coins' => 100,  'bonus' => 0],
         'pkg_standard' => ['name' => 'Standard', 'price_idr' => 25000,  'coins' => 260,  'bonus' => 10],
         'pkg_premium'  => ['name' => 'Premium',  'price_idr' => 50000,  'coins' => 550,  'bonus' => 50],
@@ -54,8 +57,8 @@ class TopUpController extends Controller
         $package = self::PACKAGES[$request->package_id];
         $user    = $request->user();
 
-        // Generate unique order ID
-        $orderId = 'TOPUP-' . $user->id . '-' . time() . '-' . rand(100, 999);
+        // Generate unique order ID using Str::random for unpredictability
+        $orderId = 'TOPUP-' . $user->id . '-' . time() . '-' . Str::random(8);
 
         // Save pending TopUp record
         $topUp = TopUp::create([
@@ -73,11 +76,10 @@ class TopUpController extends Controller
         if (!$serverKey) {
             // Fallback: return order info without snap_token for testing
             return response()->json([
-                'success'  => true,
-                'order_id' => $orderId,
+                'success'    => true,
+                'order_id'   => $orderId,
                 'snap_token' => null,
-                'message'  => 'Midtrans belum dikonfigurasi. Gunakan webhook manual untuk testing.',
-                'topup'    => $topUp,
+                'message'    => 'Midtrans belum dikonfigurasi. Gunakan webhook manual untuk testing.',
             ]);
         }
 
@@ -119,7 +121,6 @@ class TopUpController extends Controller
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if ($httpCode !== 201) {
             $topUp->update(['status' => 'failed']);
@@ -132,11 +133,10 @@ class TopUpController extends Controller
         $result = json_decode($response, true);
 
         return response()->json([
-            'success'    => true,
-            'order_id'   => $orderId,
-            'snap_token' => $result['token'] ?? null,
+            'success'      => true,
+            'order_id'     => $orderId,
+            'snap_token'   => $result['token'] ?? null,
             'redirect_url' => $result['redirect_url'] ?? null,
-            'topup'      => $topUp,
         ]);
     }
 
@@ -181,14 +181,28 @@ class TopUpController extends Controller
         ]);
 
         $response = curl_exec($ch);
-        curl_close($ch);
         $result = json_decode($response, true);
 
         $transactionStatus = $result['transaction_status'] ?? '';
 
         if (in_array($transactionStatus, ['capture', 'settlement'])) {
+            // Verify gross_amount matches expected price to prevent underpayment exploit
+            $grossAmount = floatval($result['gross_amount'] ?? 0);
+            if ($grossAmount < $topUp->amount_idr) {
+                Log::warning('Midtrans checkStatus: gross_amount mismatch', [
+                    'order_id'        => $topUp->order_id,
+                    'expected'        => $topUp->amount_idr,
+                    'received'        => $grossAmount,
+                ]);
+                $topUp->update(['status' => 'failed']);
+                return response()->json([
+                    'status'  => 'failed',
+                    'message' => 'Jumlah pembayaran tidak sesuai.',
+                ]);
+            }
+
             // Process payment if webhook hasn't done it
-            $this->processPayment($topUp, $result);
+            self::processPayment($topUp, $result);
         }
 
         return response()->json([
@@ -199,16 +213,24 @@ class TopUpController extends Controller
 
     /**
      * Process a successful payment — called by webhook or status check.
+     * Uses pessimistic locking INSIDE the DB transaction to prevent
+     * race conditions where concurrent calls could credit coins twice.
      */
     public static function processPayment(TopUp $topUp, array $midtransData): void
     {
-        // Prevent double processing
-        if ($topUp->status === 'paid') {
-            return;
-        }
+        DB::transaction(function () use ($topUp, $midtransData) {
+            // Re-fetch with exclusive lock INSIDE transaction to prevent race condition
+            $lockedTopUp = TopUp::lockForUpdate()->find($topUp->id);
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($topUp, $midtransData) {
-            $topUp->update([
+            if (!$lockedTopUp || $lockedTopUp->status === 'paid') {
+                return; // Already processed by another concurrent request
+            }
+
+            // Verify coin amount against package definition (not DB value)
+            $package = self::PACKAGES[$lockedTopUp->package_id] ?? null;
+            $coinAmount = $package ? $package['coins'] : $lockedTopUp->coins;
+
+            $lockedTopUp->update([
                 'status'                  => 'paid',
                 'midtrans_transaction_id' => $midtransData['transaction_id'] ?? null,
                 'payment_type'            => $midtransData['payment_type'] ?? 'qris',
@@ -216,15 +238,21 @@ class TopUpController extends Controller
             ]);
 
             // Lock user row and add coins
-            $user = \App\Models\User::lockForUpdate()->find($topUp->user_id);
-            $user->increment('coins', $topUp->coins);
+            $user = \App\Models\User::lockForUpdate()->find($lockedTopUp->user_id);
+            $user->increment('coins', $coinAmount);
 
             // Log transaction
             \App\Models\Transaction::create([
                 'user_id'     => $user->id,
                 'type'        => 'topup',
-                'amount'      => $topUp->coins,
-                'description' => "Top-up: {$topUp->coins} Coins (Rp " . number_format($topUp->amount_idr, 0, ',', '.') . ")",
+                'amount'      => $coinAmount,
+                'description' => "Top-up: {$coinAmount} Coins (Rp " . number_format($lockedTopUp->amount_idr, 0, ',', '.') . ")",
+            ]);
+
+            Log::info("TopUp processed successfully", [
+                'order_id' => $lockedTopUp->order_id,
+                'user_id'  => $user->id,
+                'coins'    => $coinAmount,
             ]);
         });
     }

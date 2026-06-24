@@ -62,6 +62,28 @@ class ReportController extends Controller
             'status' => 'pending',
         ]);
         
+        // Auto-delete comment if reported >= 10 times
+        if ($validated['reportable_type'] === 'comment') {
+            $reportCount = Report::where('reportable_type', 'comment')
+                ->where('reportable_id', $validated['reportable_id'])
+                ->count();
+                
+            if ($reportCount >= 10) {
+                $comment = \App\Models\Comment::find($validated['reportable_id']);
+                if ($comment) {
+                    $comment->delete();
+                    
+                    // Mark all reports for this comment as resolved
+                    Report::where('reportable_type', 'comment')
+                        ->where('reportable_id', $validated['reportable_id'])
+                        ->update([
+                            'status' => 'resolved',
+                            'action_taken' => 'auto_deleted_due_to_high_reports'
+                        ]);
+                }
+            }
+        }
+        
         return response()->json([
             'message' => 'Laporan berhasil dikirim. Tim kami akan meninjau laporan kamu.',
             'report' => $report,

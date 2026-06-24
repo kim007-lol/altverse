@@ -12,3 +12,4 @@ Artisan::command('inspire', function () {
 Schedule::command('authors:recalculate-tiers')->dailyAt('03:00');
 Schedule::command('season:rotate')->dailyAt('03:30');
 Schedule::command('season:recalculate-ranks')->everyThirtyMinutes();
+Schedule::command('topup:expire-pending')->hourly();

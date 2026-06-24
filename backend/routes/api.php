@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\Author\SeriesController;
 use App\Http\Controllers\Api\V1\Author\EpisodeController;
 use App\Http\Controllers\Api\V1\Author\PageController;
 use App\Http\Controllers\Api\V1\Author\AnalyticsController;
+use App\Http\Controllers\Api\V1\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -70,9 +71,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::prefix('missions')->middleware('reader-only')->group(function () {
         Route::get('/', [MissionController::class, 'index']);
         Route::post('{mission}/claim', [MissionController::class, 'claim']);
+        Route::post('claim-all', [MissionController::class, 'claimAll']);
     });
 
     Route::post('users/badges/{badge}/pin', [BadgeController::class, 'pin']);
+
+    // ── Gamification Dashboard ──
+    Route::get('gamification/daily-status', [\App\Http\Controllers\Api\V1\Gamification\GamificationController::class, 'dailyStatus']);
 
     // ── Leaderboard ──
     Route::prefix('leaderboard')->group(function () {
@@ -131,6 +136,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // Reading
         Route::get('history', [ReadingController::class, 'history']);
         Route::get('series/{series}', [ReadingController::class, 'seriesDetail']);
+        Route::get('series/{series}/episodes', [ReadingController::class, 'seriesEpisodes']);
         Route::get('series/{series}/episodes/{episode}', [ReadingController::class, 'readEpisode']);
         Route::post('series/{series}/episodes/{episode}/progress', [ReadingController::class, 'updateProgress']);
         Route::post('series/{series}/like', [ReadingController::class, 'toggleLike']);
@@ -152,15 +158,19 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // Comments
         Route::get('my-comments', [CommentController::class, 'userComments']);
 
-        // Top-Up (Midtrans)
+        // Top-Up (Midtrans) — rate-limited to prevent spam
         Route::get('topup/packages', [\App\Http\Controllers\Api\V1\Reader\TopUpController::class, 'packages']);
         Route::get('topup/history', [\App\Http\Controllers\Api\V1\Reader\TopUpController::class, 'history']);
-        Route::post('topup/create', [\App\Http\Controllers\Api\V1\Reader\TopUpController::class, 'create']);
-        Route::post('topup/check-status', [\App\Http\Controllers\Api\V1\Reader\TopUpController::class, 'checkStatus']);
+        Route::post('topup/create', [\App\Http\Controllers\Api\V1\Reader\TopUpController::class, 'create'])->middleware('throttle:5,1');
+        Route::post('topup/check-status', [\App\Http\Controllers\Api\V1\Reader\TopUpController::class, 'checkStatus'])->middleware('throttle:10,1');
     });
 
     // ─── Author (role-guarded) ───
     Route::prefix('author')->middleware('author-only')->group(function () {
+        // Banner
+        Route::post('banner', [ProfileController::class, 'uploadBanner']);
+        Route::delete('banner', [ProfileController::class, 'deleteBanner']);
+
         // Dashboard & Counts
         Route::get('dashboard', [SeriesController::class, 'dashboard']);
         Route::get('series-counts', [SeriesController::class, 'counts']);
@@ -215,6 +225,29 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('received', fn() => response()->json(['gifts' => []]));
         Route::get('sent', fn() => response()->json(['gifts' => []]));
     });
+
+    // ─── Admin (role-guarded) ───
+    Route::prefix('admin')->middleware('admin-only')->group(function () {
+        // Dashboard Overview
+        Route::get('dashboard', [\App\Http\Controllers\Api\V1\Admin\AdminDashboardController::class, 'overview']);
+
+        // Users
+        Route::get('users', [\App\Http\Controllers\Api\V1\Admin\AdminUserController::class, 'index']);
+        Route::get('users/{user}', [\App\Http\Controllers\Api\V1\Admin\AdminUserController::class, 'show']);
+        Route::post('users/{user}/status', [\App\Http\Controllers\Api\V1\Admin\AdminUserController::class, 'toggleStatus']);
+
+        // Reports
+        Route::get('reports', [\App\Http\Controllers\Api\V1\Admin\AdminReportController::class, 'index']);
+        Route::post('reports/{report}/resolve', [\App\Http\Controllers\Api\V1\Admin\AdminReportController::class, 'resolve']);
+
+        // Settings
+        Route::get('settings', [\App\Http\Controllers\Api\V1\Admin\AdminSettingController::class, 'index']);
+        Route::put('settings', [\App\Http\Controllers\Api\V1\Admin\AdminSettingController::class, 'update']);
+
+        // Withdrawals
+        Route::get('withdrawals', [\App\Http\Controllers\Api\V1\Admin\AdminWithdrawalController::class, 'index']);
+        Route::post('withdrawals/{id}/process', [\App\Http\Controllers\Api\V1\Admin\AdminWithdrawalController::class, 'process']);
+    });
 });
 
 // ─── Public Data (tanpa auth) ───
@@ -225,9 +258,34 @@ Route::prefix('v1/public')->group(function () {
         );
     });
 
+    // ── Pre-signed URL endpoint (recommended — no PHP memory usage) ──
+    // Returns a temporary URL valid for 60 minutes so the client can
+    // download images directly from R2/S3 without passing through PHP.
+    Route::get('image-url', function (\Illuminate\Http\Request $request) {
+        $path = $request->query('path');
+        if (!$path) {
+            return response()->json(['message' => 'path is required'], 400);
+        }
+
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = \Illuminate\Support\Facades\Storage::disk('s3');
+
+        if (!$disk->exists($path)) {
+            return response()->json(['message' => 'Image not found'], 404);
+        }
+
+        $url = $disk->temporaryUrl($path, now()->addMinutes(60));
+
+        return response()->json([
+            'url' => $url,
+            'expires_in' => 3600, // seconds
+        ]);
+    })->middleware('throttle:120,1');
+
+    // ── Legacy streaming fallback (kept for backward compatibility) ──
+    // WARNING: This streams the entire file through PHP memory.
+    // Use the /image-url endpoint above instead for production traffic.
     Route::get('images/{path}', function ($path) {
-        // Stream image directly from R2/S3 through Laravel
-        // (R2 presigned GET URLs return 403, and public URL is not enabled)
         /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
         $disk = \Illuminate\Support\Facades\Storage::disk('s3');
 
@@ -235,17 +293,18 @@ Route::prefix('v1/public')->group(function () {
             abort(404, 'Image not found');
         }
 
-        $file = $disk->get($path);
-        $mimeType = $disk->mimeType($path) ?: 'image/jpeg';
-        $size = $disk->size($path);
-        $lastModified = $disk->lastModified($path);
-
-        return response($file, 200)
-            ->header('Content-Type', $mimeType)
-            ->header('Content-Length', $size)
-            ->header('Cache-Control', 'public, max-age=86400') // 24h cache
-            ->header('Last-Modified', gmdate('D, d M Y H:i:s', $lastModified) . ' GMT')
-            ->header('ETag', '"' . md5($path . $lastModified) . '"');
+        // Use streaming response to avoid loading entire file into memory
+        return response()->stream(function () use ($disk, $path) {
+            $stream = $disk->readStream($path);
+            fpassthru($stream);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }, 200, [
+            'Content-Type'  => $disk->mimeType($path) ?: 'image/jpeg',
+            'Content-Length' => $disk->size($path),
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
     })->where('path', '.*');
 });
 

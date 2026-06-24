@@ -79,19 +79,24 @@ class AnalyticsController extends Controller
                     $user->is_verified ? 'is_verified' : null,
                 ]),
                 'silver' => [
-                    'required' => ['followers' => 100, 'published_episodes' => 5],
-                    'current'  => ['followers' => $followers, 'published_episodes' => $publishedEps],
-                    'met'      => $followers >= 100 && $publishedEps >= 5,
+                    'required' => ['followers' => 100, 'total_views' => 100],
+                    'current'  => ['followers' => $followers, 'total_views' => $allTimeViews],
+                    'met'      => $followers >= 100 && $allTimeViews >= 100,
                 ],
                 'gold' => [
-                    'required' => ['followers' => 1000, 'total_views' => 50000],
+                    'required' => ['followers' => 500, 'total_views' => 1000],
                     'current'  => ['followers' => $followers, 'total_views' => $allTimeViews],
-                    'met'      => $followers >= 1000 && $allTimeViews >= 50000,
+                    'met'      => $followers >= 500 && $allTimeViews >= 1000,
+                ],
+                'diamond' => [
+                    'required' => ['followers' => 2000, 'total_views' => 5000],
+                    'current'  => ['followers' => $followers, 'total_views' => $allTimeViews],
+                    'met'      => $followers >= 2000 && $allTimeViews >= 5000,
                 ],
                 'popular' => [
-                    'required' => ['followers' => 10000, 'has_archived_series' => true],
-                    'current'  => ['followers' => $followers, 'has_archived_series' => $hasArchived],
-                    'met'      => $followers >= 10000 && $hasArchived,
+                    'required' => ['followers' => 7000, 'total_views' => 10000],
+                    'current'  => ['followers' => $followers, 'total_views' => $allTimeViews],
+                    'met'      => $followers >= 7000 && $allTimeViews >= 10000,
                 ],
             ];
 
@@ -179,7 +184,7 @@ class AnalyticsController extends Controller
                 ->select('id', 'title', 'cover_url', 'total_views', 'total_likes', 'status')
                 ->withCount('episodes')
                 ->orderByDesc('total_views')
-                ->limit(10)
+                ->limit(3)
                 ->get();
         });
 
@@ -211,7 +216,7 @@ class AnalyticsController extends Controller
                     'series.id as series_id'
                 )
                 ->orderByDesc('episodes.view_count')
-                ->limit(10)
+                ->limit(3)
                 ->get();
         });
 

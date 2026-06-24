@@ -219,4 +219,59 @@ class BadgeService
             }
         }
     }
+
+    /**
+     * Check and award badges for finishing entire AU series.
+     * A series is considered "finished" when the user has a completed
+     * ReadingHistory (progress >= 100) for the LAST published episode
+     * of every series they have read.
+     *
+     * This is intentionally lightweight — we only query
+     * series that the reader has ever touched.
+     */
+    public static function checkFinishAUBadges(User $user): void
+    {
+        // Count series where the user has completed the final published episode.
+        // We do this with a single JOIN query to avoid N+1 problems.
+        $completedSeriesCount = \Illuminate\Support\Facades\DB::table('reading_histories as rh')
+            ->join('episodes as ep', 'ep.id', '=', 'rh.episode_id')
+            ->join(
+                // Subquery: for each series, the max published episode_number is the "final" one
+                \Illuminate\Support\Facades\DB::raw('(
+                    SELECT series_id, MAX(episode_number) as max_ep
+                    FROM episodes
+                    WHERE status = \'published\'
+                    GROUP BY series_id
+                ) as finals'),
+                function ($join) {
+                    $join->on('finals.series_id', '=', 'ep.series_id')
+                         ->on('finals.max_ep', '=', 'ep.episode_number');
+                }
+            )
+            ->where('rh.user_id', $user->id)
+            ->where('rh.progress', '>=', 100)
+            ->where('ep.status', 'published')
+            ->distinct('rh.series_id')
+            ->count();
+
+        if ($completedSeriesCount >= 1) {
+            self::awardBadge($user, 'finish_1_au');
+        }
+        if ($completedSeriesCount >= 10) {
+            self::awardBadge($user, 'finish_10_au');
+        }
+    }
+
+    /**
+     * Check and award the 7-day login streak badge.
+     * Called from WalletController::claimDailyReward after the streak is calculated.
+     *
+     * @param int $currentStreak The user's current consecutive login streak.
+     */
+    public static function checkStreakBadge(User $user, int $currentStreak): void
+    {
+        if ($currentStreak >= 7) {
+            self::awardBadge($user, 'streak_7_days');
+        }
+    }
 }

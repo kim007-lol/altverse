@@ -39,7 +39,7 @@ class SearchController extends Controller
         $cacheKey = "discover:" . ($genre ?: 'all') . ":{$sort}:{$ageRating}:{$isPremium}:{$status}:page:{$page}";
 
         $result = Cache::remember($cacheKey, 60, function () use ($genre, $sort, $ageRating, $isPremium, $status) {
-            $query = Series::with(['author:id,name,pen_name,avatar_url'])
+            $query = Series::with(['author:id,name,pen_name,avatar_url,author_tier'])
                 ->withCount('episodes')
                 ->where('status', $status);
 
@@ -93,7 +93,7 @@ class SearchController extends Controller
         }
 
         // ── User search (dual-profile: split Reader & Author identities) ──
-        $rawUsers = \App\Models\User::select('id', 'name', 'pen_name', 'avatar_url', 'author_avatar_url', 'role', 'bio', 'author_bio', 'level', 'supporter_level_id', 'followers_count')
+        $rawUsers = \App\Models\User::select('id', 'username', 'name', 'pen_name', 'avatar_url', 'author_avatar_url', 'role', 'bio', 'author_bio', 'level', 'supporter_level_id', 'followers_count', 'author_tier')
             ->with([
                 'supporterLevel:id,name,icon,color',
                 'badges' => function ($query) {
@@ -101,7 +101,8 @@ class SearchController extends Controller
                 }
             ])
             ->where(function ($qb) use ($q) {
-                $qb->where('name', 'LIKE', "%{$q}%")
+                $qb->where('username', 'LIKE', "%{$q}%")
+                    ->orWhere('name', 'LIKE', "%{$q}%")
                     ->orWhere('pen_name', 'LIKE', "%{$q}%");
             })
             ->orderByDesc('followers_count')
@@ -120,11 +121,13 @@ class SearchController extends Controller
 
             $nameMatches = $u->name && stripos($u->name, $q) !== false;
             $penNameMatches = $u->pen_name && stripos($u->pen_name, $q) !== false;
+            $usernameMatches = $u->username && stripos($u->username, $q) !== false;
 
-            // Emit Reader profile if name matches the query
-            if ($nameMatches) {
+            // Emit Reader profile if name or username matches the query
+            if ($nameMatches || $usernameMatches) {
                 $users->push([
                     'id'              => $u->id,
+                    'username'        => $u->username,
                     'name'            => $u->name,
                     'pen_name'        => null,
                     'avatar_url'      => $u->avatar_url,
@@ -139,10 +142,11 @@ class SearchController extends Controller
                 ]);
             }
 
-            // Emit Author profile if pen_name matches the query
-            if ($penNameMatches) {
+            // Emit Author profile if pen_name OR username matches the query, and user has a pen_name
+            if (($penNameMatches || $usernameMatches) && !empty($u->pen_name)) {
                 $users->push([
                     'id'              => $u->id,
+                    'username'        => $u->username,
                     'name'            => $u->pen_name,
                     'pen_name'        => $u->pen_name,
                     'avatar_url'      => $u->author_avatar_url ?? $u->avatar_url,
@@ -153,14 +157,16 @@ class SearchController extends Controller
                     'level'           => $u->level ?? 0,
                     'followers_count' => $u->followers_count ?? 0,
                     'supporter_level' => $u->supporterLevel,
+                    'author_tier'     => $u->author_tier,
                     'pinned_badges'   => $badgeList,
                 ]);
             }
 
             // If neither specifically matched (shouldn't happen), emit based on current role
-            if (!$nameMatches && !$penNameMatches) {
+            if (!$nameMatches && !$penNameMatches && !$usernameMatches) {
                 $users->push([
                     'id'              => $u->id,
+                    'username'        => $u->username,
                     'name'            => $u->role === 'author' ? ($u->pen_name ?? $u->name) : $u->name,
                     'pen_name'        => $u->pen_name,
                     'avatar_url'      => $u->role === 'author' ? ($u->author_avatar_url ?? $u->avatar_url) : $u->avatar_url,
@@ -171,13 +177,14 @@ class SearchController extends Controller
                     'level'           => $u->level ?? 0,
                     'followers_count' => $u->followers_count ?? 0,
                     'supporter_level' => $u->supporterLevel,
+                    'author_tier'     => $u->author_tier,
                     'pinned_badges'   => $badgeList,
                 ]);
             }
         }
 
         // ── Series search with full-text search ──
-        $query = Series::with(['author:id,name,pen_name,avatar_url'])
+        $query = Series::with(['author:id,name,pen_name,avatar_url,author_tier'])
             ->withCount('episodes')
             ->where('status', $status);
 

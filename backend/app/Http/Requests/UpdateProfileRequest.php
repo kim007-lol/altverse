@@ -16,13 +16,35 @@ class UpdateProfileRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     * Multipart forms send social_links as a JSON string — decode it into an array first.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('social_links') && is_string($this->input('social_links'))) {
+            $decoded = json_decode($this->input('social_links'), true);
+            if ($decoded !== null) {
+                $this->merge(['social_links' => $decoded]);
+            }
+        }
+
+        if ($this->has('author_social_links') && is_string($this->input('author_social_links'))) {
+            $decoded = json_decode($this->input('author_social_links'), true);
+            if ($decoded !== null) {
+                $this->merge(['author_social_links' => $decoded]);
+            }
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      */
     public function rules(): array
     {
         return [
-            'name'                 => ['sometimes', 'string', 'min:2', 'max:255', Rule::unique('users', 'name')->ignore($this->user()->id)],
-            'pen_name'             => ['sometimes', 'string', 'max:255', Rule::unique('users', 'pen_name')->ignore($this->user()->id)],
+            'username'             => ['sometimes', 'string', 'min:3', 'max:30', 'regex:/^[a-z0-9_]+$/', Rule::unique('users', 'username')->ignore($this->user()->id)],
+            'name'                 => ['sometimes', 'string', 'min:2', 'max:255'],
+            'pen_name'             => ['sometimes', 'string', 'max:255'],
             'bio'                  => ['sometimes', 'nullable', 'string', 'max:1000'],
             'author_bio'           => ['sometimes', 'nullable', 'string', 'max:1000'],
             'avatar'               => ['sometimes', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
@@ -39,11 +61,13 @@ class UpdateProfileRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'username.min'            => 'Username minimal 3 karakter.',
+            'username.max'            => 'Username maksimal 30 karakter.',
+            'username.regex'          => 'Username hanya boleh huruf kecil, angka, dan underscore.',
+            'username.unique'         => 'Username ini sudah digunakan.',
             'name.min'                => 'Nama minimal 2 karakter.',
             'name.max'                => 'Nama maksimal 255 karakter.',
-            'name.unique'             => 'Nama (Username) ini sudah digunakan oleh user lain.',
             'pen_name.max'            => 'Pen name maksimal 255 karakter.',
-            'pen_name.unique'         => 'Pen name ini sudah digunakan oleh author lain.',
             'bio.max'                 => 'Bio maksimal 1000 karakter.',
             'author_bio.max'          => 'Bio author maksimal 1000 karakter.',
             'avatar.image'            => 'Avatar harus berupa gambar.',

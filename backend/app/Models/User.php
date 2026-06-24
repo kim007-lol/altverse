@@ -12,6 +12,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
+        'username',
         'name',
         'email',
         'password',
@@ -22,6 +23,7 @@ class User extends Authenticatable
         'author_bio',
         'social_links',
         'author_social_links',
+        'author_banner_url',
         'theme_preference',
         'theme_color',
     ];
@@ -57,6 +59,39 @@ class User extends Authenticatable
             'social_links' => 'array',
             'author_social_links' => 'array',
         ];
+    }
+
+    public function getAvatarUrlAttribute($value)
+    {
+        if (!$value) return null;
+        if (str_starts_with($value, 'http')) return $value;
+        try {
+            return \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($value, now()->addMinutes(60));
+        } catch (\Exception $e) {
+            return url("api/v1/public/images/" . ltrim($value, '/'));
+        }
+    }
+
+    public function getAuthorAvatarUrlAttribute($value)
+    {
+        if (!$value) return null;
+        if (str_starts_with($value, 'http')) return $value;
+        try {
+            return \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($value, now()->addMinutes(60));
+        } catch (\Exception $e) {
+            return url("api/v1/public/images/" . ltrim($value, '/'));
+        }
+    }
+
+    public function getAuthorBannerUrlAttribute($value)
+    {
+        if (!$value) return null;
+        if (str_starts_with($value, 'http')) return $value;
+        try {
+            return \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl($value, now()->addMinutes(60));
+        } catch (\Exception $e) {
+            return url("api/v1/public/images/" . ltrim($value, '/'));
+        }
     }
 
     // ─── Relationships ───

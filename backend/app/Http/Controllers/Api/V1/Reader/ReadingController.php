@@ -168,17 +168,10 @@ class ReadingController extends Controller
             ]
         );
 
-        // Track mission progress if episode completed
+        // Dispatch gamification to background job if episode completed
         if ($validated['progress'] >= 100) {
-            // Award XP for reading completion
             XpService::award($user->id, 'reading_complete');
-
-            // Track mission progress
-            $missionService = app(\App\Services\MissionService::class);
-            $missionService->autoTrack($user, 'read_episode');
-
-            // Check reading badges
-            \App\Services\BadgeService::checkReadingBadges($user);
+            \App\Jobs\ProcessGamificationJob::dispatch($user->id, 'read_episode');
         }
 
         return response()->json([
@@ -186,112 +179,125 @@ class ReadingController extends Controller
         ]);
     }
 
-    /** Get Series detail with episodes */
+    /**
+     * Get Series detail (metadata only — episodes loaded via separate paginated endpoint).
+     */
     public function seriesDetail(Request $request, Series $series): JsonResponse
     {
         $user = $request->user();
 
         $series->load([
             'author:id,name,pen_name,avatar_url,author_avatar_url,bio,author_tier,followers_count',
-            'episodes' => fn($q) => $q
-                ->where('status', 'published')
-                ->orderBy('episode_number')
-                ->select('id', 'series_id', 'title', 'episode_number', 'cover_url', 'view_count', 'is_premium', 'coin_price', 'status', 'published_at', 'created_at'),
         ]);
 
-        // Add user-specific flags
+        // Count published episodes without loading them
+        $series->loadCount(['episodes' => fn($q) => $q->where('status', 'published')]);
+
         $seriesData = $series->toArray();
         $seriesData['is_liked'] = $user->likes()->where('series_id', $series->id)->exists();
         $seriesData['is_bookmarked'] = $user->bookmarks()->where('series_id', $series->id)->exists();
         $seriesData['is_following'] = $user->following()->where('following_id', $series->author_id)->exists();
         $seriesData['user_coins'] = $user->coins;
+        $seriesData['episode_count'] = $seriesData['episodes_count'] ?? 0;
 
-        // Add per-episode unlock status
-        $unlockedIds = $user->unlockedEpisodes()
-            ->whereIn('episode_id', collect($seriesData['episodes'])->pluck('id'))
-            ->pluck('episode_id')
-            ->toArray();
-
-        foreach ($seriesData['episodes'] as &$ep) {
-            $ep['is_unlocked'] = in_array($ep['id'], $unlockedIds);
-        }
-        unset($ep);
+        // Remove the auto-loaded episodes_count key (we renamed it)
+        unset($seriesData['episodes_count']);
 
         return response()->json(['series' => $seriesData]);
     }
 
     /**
+     * Paginated episode list for a series.
+     * Avoids loading hundreds of episodes in a single JSON payload.
+     */
+    public function seriesEpisodes(Request $request, Series $series): JsonResponse
+    {
+        $user = $request->user();
+
+        $episodes = $series->episodes()
+            ->where('status', 'published')
+            ->orderBy('episode_number')
+            ->select('id', 'series_id', 'title', 'episode_number', 'cover_url', 'view_count', 'is_premium', 'coin_price', 'status', 'published_at', 'created_at')
+            ->paginate(20);
+
+        // Add per-episode unlock status
+        $unlockedIds = $user->unlockedEpisodes()
+            ->whereIn('episode_id', $episodes->pluck('id'))
+            ->pluck('episode_id')
+            ->toArray();
+
+        $episodes->getCollection()->transform(function ($ep) use ($unlockedIds) {
+            $ep->is_unlocked = in_array($ep->id, $unlockedIds);
+            return $ep;
+        });
+
+        return response()->json($episodes);
+    }
+
+    /**
      * Toggle like on Series.
-     * SECURITY: Uses DB::transaction + lockForUpdate to prevent TOCTOU race condition.
+     * Uses optimistic approach: atomic increment/decrement without row locking.
      */
     public function toggleLike(Request $request, Series $series): JsonResponse
     {
         $user = $request->user();
 
-        $result = DB::transaction(function () use ($user, $series) {
-            // Lock series row — concurrent requests will queue here
-            $lockedSeries = Series::lockForUpdate()->find($series->id);
+        $isLiked = $user->likes()->where('series_id', $series->id)->exists();
 
-            $isLiked = $user->likes()->where('series_id', $lockedSeries->id)->exists();
-
-            if ($isLiked) {
-                $user->likes()->detach($lockedSeries->id);
-                $lockedSeries->total_likes = max(0, $lockedSeries->total_likes - 1);
-                $lockedSeries->save();
-                return ['liked' => false, 'total_likes' => $lockedSeries->total_likes];
+        if ($isLiked) {
+            $user->likes()->detach($series->id);
+            $series->decrement('total_likes');
+            // Ensure non-negative
+            if ($series->fresh()->total_likes < 0) {
+                $series->update(['total_likes' => 0]);
             }
+            return response()->json(['liked' => false, 'total_likes' => max(0, $series->fresh()->total_likes)]);
+        }
 
-            $user->likes()->attach($lockedSeries->id);
-            $lockedSeries->increment('total_likes');
-            return ['liked' => true, 'total_likes' => $lockedSeries->fresh()->total_likes];
-        });
+        $user->likes()->syncWithoutDetaching([$series->id]);
+        $series->increment('total_likes');
 
-        return response()->json($result);
+        return response()->json(['liked' => true, 'total_likes' => $series->fresh()->total_likes]);
     }
 
     /**
      * Toggle like on an Episode (separate from series like).
-     * SECURITY: Uses DB::transaction + lockForUpdate to prevent TOCTOU race condition.
+     * Uses optimistic approach: atomic increment/decrement without row locking.
      */
     public function toggleEpisodeLike(Request $request, Series $series, Episode $episode): JsonResponse
     {
         $user = $request->user();
 
-        $result = DB::transaction(function () use ($user, $episode) {
-            // Lock episode row — concurrent requests will queue here
-            $lockedEpisode = Episode::lockForUpdate()->find($episode->id);
+        $existing = EpisodeLike::where('user_id', $user->id)
+            ->where('episode_id', $episode->id)
+            ->first();
 
-            $existing = EpisodeLike::where('user_id', $user->id)
-                ->where('episode_id', $lockedEpisode->id)
-                ->lockForUpdate()
-                ->first();
-
-            if ($existing && $existing->is_active) {
-                $existing->update(['is_active' => false]);
-                $lockedEpisode->like_count = max(0, $lockedEpisode->like_count - 1);
-                $lockedEpisode->save();
-                return ['liked' => false, 'like_count' => $lockedEpisode->like_count];
+        if ($existing && $existing->is_active) {
+            // Unlike
+            $existing->update(['is_active' => false]);
+            $episode->decrement('like_count');
+            if ($episode->fresh()->like_count < 0) {
+                $episode->update(['like_count' => 0]);
             }
+            return response()->json(['liked' => false, 'like_count' => max(0, $episode->fresh()->like_count)]);
+        }
 
-            if ($existing) {
-                $existing->update(['is_active' => true]);
-            } else {
-                EpisodeLike::create([
-                    'user_id'    => $user->id,
-                    'episode_id' => $lockedEpisode->id,
-                    'is_active'  => true,
-                ]);
-            }
+        // Like (new or re-activate)
+        if ($existing) {
+            $existing->update(['is_active' => true]);
+        } else {
+            EpisodeLike::create([
+                'user_id'    => $user->id,
+                'episode_id' => $episode->id,
+                'is_active'  => true,
+            ]);
+        }
 
-            $lockedEpisode->increment('like_count');
+        $episode->increment('like_count');
 
-            // Track mission progress for like
-            $missionService = app(\App\Services\MissionService::class);
-            $missionService->autoTrack($user, 'like_episode');
+        // Dispatch gamification to background job
+        \App\Jobs\ProcessGamificationJob::dispatch($user->id, 'like_episode');
 
-            return ['liked' => true, 'like_count' => $lockedEpisode->fresh()->like_count];
-        });
-
-        return response()->json($result);
+        return response()->json(['liked' => true, 'like_count' => $episode->fresh()->like_count]);
     }
 }

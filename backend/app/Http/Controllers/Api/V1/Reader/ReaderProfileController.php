@@ -48,6 +48,7 @@ class ReaderProfileController extends Controller
         return response()->json([
             'user' => [
                 'id' => $user->id,
+                'username' => $user->username,
                 'name' => $user->name,
                 'pen_name' => $user->pen_name,
                 'avatar_url' => $user->avatar_url,
@@ -87,6 +88,7 @@ class ReaderProfileController extends Controller
     {
         $user = User::select(
             'id',
+            'username',
             'name',
             'pen_name',
             'avatar_url',
@@ -123,7 +125,7 @@ class ReaderProfileController extends Controller
                 'type'        => $b->condition_type ?? 'achievement',
                 'color'       => $b->color,
                 'earned_at'   => $b->pivot->earned_at,
-                'is_pinned'   => $b->pivot->is_pinned,
+                'is_pinned'   => (bool) $b->pivot->is_pinned,
             ]);
 
         // Stats — hide private counts from public viewers

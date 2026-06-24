@@ -29,6 +29,12 @@ class BadgeController extends Controller
             return response()->json(['message' => 'Lifetime badge sudah otomatis di-pin.'], 422);
         }
 
+        // Check if the badge is already pinned
+        if ($userBadge->pivot->is_pinned) {
+            $user->badges()->updateExistingPivot($badge->id, ['is_pinned' => false]);
+            return response()->json(['message' => 'Badge berhasil di-unpin!']);
+        }
+
         // Only unpin NON-lifetime (custom) badges — preserve auto-pinned lifetime badges
         $lifetimeBadgeIds = Badge::whereIn('key', $lifetimeKeys)->pluck('id')->toArray();
         $customBadgeIds = $user->badges()
