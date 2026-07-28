@@ -7,7 +7,7 @@ type User struct {
 	Name            string     `gorm:"type:varchar(255);not null"           json:"name"`
 	Email           string     `gorm:"type:varchar(255);not null;uniqueIndex" json:"email"`
 	Password        string     `gorm:"type:varchar(255);not null"           json:"-"`
-	Role            string     `gorm:"type:usr_role;not null;default:reader" json:"role"`
+	Role            string     `gorm:"type:usr_role;not null;default:reader;index" json:"role"`
 	AvatarURL       *string    `gorm:"type:varchar(512)"                    json:"avatar_url"`
 	PenName         *string    `gorm:"type:varchar(255)"                    json:"pen_name"`
 	Bio             *string    `gorm:"type:text"                            json:"bio"`

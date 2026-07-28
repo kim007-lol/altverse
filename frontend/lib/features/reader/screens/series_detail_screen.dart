@@ -96,7 +96,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
       if (res.success && mounted) {
         final data = res.data;
         final List items = data['data'] ?? [];
-        final int lastPage = data['last_page'] ?? 1;
+        final int lastPage = (data['meta'] as Map?)?['last_page'] ?? 1;
         setState(() {
           _episodes.addAll(items.map((e) => Map<String, dynamic>.from(e)).toList());
           _hasMoreEpisodes = _episodePage < lastPage;
@@ -329,9 +329,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           children: [
             Icon(Icons.lock, color: Colors.orange[400]),
             const SizedBox(width: 8),
-            const Expanded(
-              child: Text('Episode Premium', style: TextStyle(fontSize: 18)),
-            ),
+            const Expanded(child: Text('Episode Premium', style: TextStyle(fontSize: 18))),
           ],
         ),
         content: Column(
@@ -359,11 +357,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                       const SizedBox(width: 6),
                       Text(
                         '$coinPrice Coins',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange[700],
-                        ),
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.orange[700]),
                       ),
                     ],
                   ),
@@ -397,10 +391,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           FilledButton.icon(
             onPressed: hasEnough
                 ? () {
@@ -430,10 +421,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     );
 
     try {
-      final res = await ApiService.post(
-        ApiEndpoints.episodeUnlock(episodeId),
-        body: {},
-      );
+      final res = await ApiService.post(ApiEndpoints.episodeUnlock(episodeId), body: {});
 
       if (!mounted) return;
       Navigator.pop(context); // close loading
@@ -471,22 +459,14 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res.message),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.message), backgroundColor: Colors.red));
       }
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // close loading
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal unlock episode. Coba lagi.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Gagal unlock episode. Coba lagi.'), backgroundColor: Colors.red));
       }
     }
   }
@@ -530,9 +510,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Gagal membuka link: $e'), backgroundColor: Colors.red),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Gagal membuka link: $e'), backgroundColor: Colors.red));
           }
         }
       },
@@ -547,10 +527,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: info.color.withAlpha(25),
-                borderRadius: BorderRadius.circular(10),
-              ),
+              decoration: BoxDecoration(color: info.color.withAlpha(25), borderRadius: BorderRadius.circular(10)),
               child: Icon(info.icon, color: info.color, size: 20),
             ),
             const SizedBox(width: 12),
@@ -560,11 +537,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                 children: [
                   Text(
                     info.label,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: info.color,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: info.color),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -755,16 +728,16 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                       // Follow Button (hide if own series)
                       if (!isOwnSeries)
                         FilledButton.icon(
-                        onPressed: _toggleFollow,
-                        icon: Icon(_isFollowing ? Icons.check : Icons.person_add_alt_1, size: 16),
-                        label: Text(_isFollowing ? 'Following' : 'Follow'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: _isFollowing ? Colors.grey[300] : theme.primaryColor,
-                          foregroundColor: _isFollowing ? Colors.grey[700] : theme.colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          onPressed: _toggleFollow,
+                          icon: Icon(_isFollowing ? Icons.check : Icons.person_add_alt_1, size: 16),
+                          label: Text(_isFollowing ? 'Following' : 'Follow'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _isFollowing ? Colors.grey[300] : theme.primaryColor,
+                            foregroundColor: _isFollowing ? Colors.grey[700] : theme.colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -956,9 +929,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                                 width: 36,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: isLocked
-                                      ? Colors.orange.withAlpha(20)
-                                      : theme.primaryColor.withAlpha(20),
+                                  color: isLocked ? Colors.orange.withAlpha(20) : theme.primaryColor.withAlpha(20),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Center(
@@ -1053,11 +1024,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Center(
                   child: _isLoadingEpisodes
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
                       : TextButton.icon(
                           onPressed: _loadEpisodes,
                           icon: const Icon(Icons.expand_more),

@@ -1,9 +1,13 @@
 package services
 
 import (
+	"errors"
+
 	"aureader/backend/errorhandler"
 	"aureader/backend/models"
 	"aureader/backend/repositories"
+
+	"gorm.io/gorm"
 )
 
 type CreateCommentInput struct {
@@ -52,7 +56,15 @@ func (s *socialService) Follow(followerID, followedID uint64) error {
 	if already {
 		return errorhandler.NewConflict("already following")
 	}
-	return s.socialRepo.Follow(followerID, followedID)
+	if err := s.socialRepo.Follow(followerID, followedID); err != nil {
+		// A concurrent double-tap can slip past the pre-check; the unique
+		// constraint then surfaces as a clean 409 rather than a 500.
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return errorhandler.NewConflict("already following")
+		}
+		return errorhandler.NewInternalError("")
+	}
+	return nil
 }
 
 func (s *socialService) Unfollow(followerID, followedID uint64) error {
@@ -95,7 +107,13 @@ func (s *socialService) Bookmark(userID, seriesID uint64) error {
 	if already {
 		return errorhandler.NewConflict("already bookmarked")
 	}
-	return s.socialRepo.Bookmark(userID, seriesID)
+	if err := s.socialRepo.Bookmark(userID, seriesID); err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return errorhandler.NewConflict("already bookmarked")
+		}
+		return errorhandler.NewInternalError("")
+	}
+	return nil
 }
 
 func (s *socialService) Unbookmark(userID, seriesID uint64) error {

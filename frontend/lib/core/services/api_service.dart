@@ -13,9 +13,14 @@ class ApiService {
 
   static const Duration _timeout = Duration(seconds: 30);
   String? _token;
+  String? _refreshToken;
 
-  /// Callback invoked when a 401 response is received and the session
-  /// cannot be recovered. AuthProvider sets this to trigger a logout.
+  /// Guards against a thundering herd of refreshes: concurrent 401s all await
+  /// the same in-flight refresh instead of each firing their own.
+  Future<bool>? _refreshInFlight;
+
+  /// Callback invoked when the session cannot be recovered (refresh failed or
+  /// no refresh token). AuthProvider sets this to trigger a logout.
   static void Function()? onForceLogout;
 
   /// In-memory cache for pre-signed image URLs (path → {url, expiry}).
@@ -34,8 +39,21 @@ class ApiService {
 
   Future<void> clearToken() async {
     _token = null;
+    _refreshToken = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
+    await prefs.remove('refresh_token');
+  }
+
+  Future<void> setRefreshToken(String token) async {
+    _refreshToken = token;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('refresh_token', token);
+  }
+
+  Future<void> loadRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    _refreshToken = prefs.getString('refresh_token');
   }
 
   String? get token => _token;
@@ -184,78 +202,103 @@ class ApiService {
     return Uri.parse('${ApiConstants.baseUrl}/$cleanEndpoint');
   }
 
-  Future<ApiResponse> _get(String endpoint, {Map<String, dynamic>? queryParams}) async {
+  Future<ApiResponse> _get(String endpoint, {Map<String, dynamic>? queryParams}) {
+    var uri = _buildUri(endpoint);
+    if (queryParams != null && queryParams.isNotEmpty) {
+      uri = uri.replace(queryParameters: queryParams.map((key, value) => MapEntry(key, value.toString())));
+    }
+    // _headers is re-read on each call so a post-refresh retry uses the new token.
+    return _send(() => http.get(uri, headers: _headers).timeout(_timeout));
+  }
+
+  Future<ApiResponse> _post(String endpoint, {Map<String, dynamic>? body}) {
+    final uri = _buildUri(endpoint);
+    final encoded = body != null ? jsonEncode(body) : null;
+    return _send(() => http.post(uri, headers: _headers, body: encoded).timeout(_timeout));
+  }
+
+  Future<ApiResponse> _put(String endpoint, {Map<String, dynamic>? body}) {
+    final uri = _buildUri(endpoint);
+    final encoded = body != null ? jsonEncode(body) : null;
+    return _send(() => http.put(uri, headers: _headers, body: encoded).timeout(_timeout));
+  }
+
+  Future<ApiResponse> _patch(String endpoint, {Map<String, dynamic>? body}) {
+    final uri = _buildUri(endpoint);
+    final encoded = body != null ? jsonEncode(body) : null;
+    return _send(() => http.patch(uri, headers: _headers, body: encoded).timeout(_timeout));
+  }
+
+  Future<ApiResponse> _delete(String endpoint) {
+    final uri = _buildUri(endpoint);
+    return _send(() => http.delete(uri, headers: _headers).timeout(_timeout));
+  }
+
+  /// Runs an HTTP request and, on a 401 with a stored refresh token, transparently
+  /// refreshes the access token (single-flight) and retries the request once.
+  /// If refresh fails, the session is unrecoverable and onForceLogout fires.
+  Future<ApiResponse> _send(Future<http.Response> Function() doRequest) async {
+    http.Response response;
     try {
-      var uri = _buildUri(endpoint);
-      if (queryParams != null && queryParams.isNotEmpty) {
-        uri = uri.replace(queryParameters: queryParams.map((key, value) => MapEntry(key, value.toString())));
+      response = await doRequest();
+    } on TimeoutException {
+      return ApiResponse(success: false, message: 'Request timeout. Please try again.');
+    } catch (e) {
+      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
+    }
+
+    if (response.statusCode == 401 && _refreshToken != null && _refreshToken!.isNotEmpty) {
+      final refreshed = await _refreshAccessToken();
+      if (refreshed) {
+        try {
+          response = await doRequest();
+        } on TimeoutException {
+          return ApiResponse(success: false, message: 'Request timeout. Please try again.');
+        } catch (e) {
+          return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
+        }
+      } else {
+        onForceLogout?.call();
       }
-
-      final response = await http.get(uri, headers: _headers);
-      return await _handleResponse(response);
-    } catch (e) {
-      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
     }
+    return _handleResponse(response);
   }
 
-  Future<ApiResponse> _post(String endpoint, {Map<String, dynamic>? body}) async {
-    try {
-      final uri = _buildUri(endpoint);
-      final response = await http.post(uri, headers: _headers, body: body != null ? jsonEncode(body) : null);
-      return await _handleResponse(response);
-    } catch (e) {
-      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
-    }
+  /// Single-flight refresh: concurrent callers share one in-flight refresh.
+  Future<bool> _refreshAccessToken() {
+    return _refreshInFlight ??= _doRefresh().whenComplete(() => _refreshInFlight = null);
   }
 
-  Future<ApiResponse> _put(String endpoint, {Map<String, dynamic>? body}) async {
+  Future<bool> _doRefresh() async {
     try {
-      final uri = _buildUri(endpoint);
-      final response = await http
-          .put(uri, headers: _headers, body: body != null ? jsonEncode(body) : null)
+      final resp = await http
+          .post(
+            _buildUri('auth/refresh'),
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: jsonEncode({'refresh_token': _refreshToken}),
+          )
           .timeout(_timeout);
-      return await _handleResponse(response);
-    } on TimeoutException {
-      return ApiResponse(success: false, message: 'Request timeout. Please try again.');
-    } catch (e) {
-      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
-    }
-  }
-
-  Future<ApiResponse> _patch(String endpoint, {Map<String, dynamic>? body}) async {
-    try {
-      final uri = _buildUri(endpoint);
-      final response = await http
-          .patch(uri, headers: _headers, body: body != null ? jsonEncode(body) : null)
-          .timeout(_timeout);
-      return await _handleResponse(response);
-    } on TimeoutException {
-      return ApiResponse(success: false, message: 'Request timeout. Please try again.');
-    } catch (e) {
-      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
-    }
-  }
-
-  Future<ApiResponse> _delete(String endpoint) async {
-    try {
-      final uri = _buildUri(endpoint);
-      final response = await http.delete(uri, headers: _headers).timeout(_timeout);
-      return await _handleResponse(response);
-    } on TimeoutException {
-      return ApiResponse(success: false, message: 'Request timeout. Please try again.');
-    } catch (e) {
-      return ApiResponse(success: false, message: 'Network error: ${e.toString()}');
-    }
+      if (resp.statusCode == 200) {
+        final body = jsonDecode(resp.body);
+        final data = body is Map ? body['data'] : null;
+        if (data is Map && data['access_token'] != null) {
+          await setToken(data['access_token'] as String);
+          if (data['refresh_token'] != null) {
+            await setRefreshToken(data['refresh_token'] as String);
+          }
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
   }
 
   Future<ApiResponse> _handleResponse(http.Response response) async {
     final statusCode = response.statusCode;
 
-    // ── 401 Interceptor: trigger force-logout ──
-    if (statusCode == 401 && onForceLogout != null) {
-      // The token is expired or invalid. Notify the app to log out.
-      onForceLogout?.call();
-    }
+    // Note: 401 handling (refresh → retry → force-logout) lives in _send so we
+    // don't force-logout before a refresh attempt. Multipart uploads call this
+    // directly; an expired token there surfaces as a normal 401 ApiResponse.
 
     try {
       final data = await compute(jsonDecode, response.body);

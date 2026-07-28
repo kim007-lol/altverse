@@ -12,8 +12,11 @@ type SeriesFilter struct {
 	Type     string
 	GenreID  *uint64
 	Search   string
-	Page     int
-	PerPage  int
+	// OrderBy accepts named presets: "views", "likes", "newest", "updated".
+	// Defaults to "updated" when empty.
+	OrderBy string
+	Page    int
+	PerPage int
 }
 
 type SeriesRepository interface {
@@ -75,8 +78,18 @@ func (r *seriesRepository) FindAll(f SeriesFilter) ([]models.Series, int64, erro
 
 	var series []models.Series
 	offset := (f.Page - 1) * f.PerPage
+	orderMap := map[string]string{
+		"views":   "total_views DESC",
+		"likes":   "total_likes DESC",
+		"newest":  "created_at DESC",
+		"updated": "updated_at DESC",
+	}
+	order := "updated_at DESC"
+	if mapped, ok := orderMap[f.OrderBy]; ok {
+		order = mapped
+	}
 	err := q.Preload("Author").Preload("Genres").
-		Order("updated_at DESC").Offset(offset).Limit(f.PerPage).Find(&series).Error
+		Order(order).Offset(offset).Limit(f.PerPage).Find(&series).Error
 	return series, total, err
 }
 

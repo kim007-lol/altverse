@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 import 'reader_guide_screen.dart';
+import '../../reader/screens/reader_profile_screen.dart';
+import '../../reader/screens/author_profile_screen.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -353,7 +355,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
     // Author tier (for Top Author tab)
     final authorTier = userData['author_tier'] ?? item['author_tier'];
 
-    return Container(
+    // Resolve the target user id for profile navigation. Entry exposes a flat
+    // `user_id`; nested user/author objects fall back to their own `id`.
+    final int? targetId = _asInt(item['user_id']) ?? _asInt(userData['id']) ?? _asInt(userData['author_id']);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: targetId == null ? null : () => _openProfile(targetId, type),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -414,7 +423,23 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
           ),
         ],
       ),
+      ),
     );
+  }
+
+  // Coerce a dynamic JSON value (int or numeric string) into an int, or null.
+  int? _asInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse(value.toString());
+  }
+
+  // Route to the proper profile screen based on the active leaderboard tab.
+  void _openProfile(int id, String type) {
+    final Widget screen = type == 'author'
+        ? AuthorProfileScreen(authorId: id)
+        : ReaderProfileScreen(userId: id);
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
 
   String _formatNumber(dynamic value) {

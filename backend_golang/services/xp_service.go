@@ -1,13 +1,10 @@
 package services
 
 import (
-	"errors"
 	"time"
 
 	"aureader/backend/models"
 	"aureader/backend/repositories"
-
-	"gorm.io/gorm"
 )
 
 // XP per source — caps prevent daily farming.
@@ -73,62 +70,34 @@ func (s *xpService) AwardXP(userID uint64, source string, customAmount int) (int
 
 	today := time.Now().Truncate(24 * time.Hour)
 
-	// Enforce daily cap
-	if cfg.DailyCap > 0 {
-		existing, err := s.gamRepo.GetDailyXPLog(userID, source, today)
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			return 0, 0, err
-		}
-		if err == nil {
-			remaining := cfg.DailyCap - existing.XPEarned
-			if remaining <= 0 {
-				return 0, 0, nil // daily cap hit
-			}
-			if amount > remaining {
-				amount = remaining
-			}
-		}
-	}
-
-	// Log the XP
-	if err := s.gamRepo.CreateDailyXPLog(&models.DailyXPLog{
-		UserID:   userID,
-		Source:   source,
-		XPEarned: amount,
-		LogDate:  today,
-	}); err != nil {
-		// If UNIQUE violation (same source+date already logged), add to it via upsert — ignore here
-		_ = err
-	}
-
-	// Update cumulative XP
-	existing, err := s.gamRepo.GetUserXP(userID)
-	totalXP := amount
-	if err == nil {
-		totalXP += existing.TotalXP
-	}
-
-	newLevel := CalculateLevel(totalXP)
-	if err := s.gamRepo.UpsertUserXP(&models.UserXP{
-		UserID:       userID,
-		TotalXP:      totalXP,
-		CurrentLevel: newLevel,
-	}); err != nil {
+	// Atomic, cap-aware grant. `granted` is the XP actually awarded today after
+	// honouring the daily cap; concurrent awards on the same key are serialised.
+	granted, err := s.gamRepo.GrantDailyXP(userID, source, amount, cfg.DailyCap, today)
+	if err != nil {
 		return 0, 0, err
 	}
-
-	// Sync season XP if a season is active
-	if season, err := s.gamRepo.GetActiveSeason(); err == nil {
-		sxp := &models.SeasonXP{UserID: userID, SeasonID: season.ID}
-		if existing, err := s.gamRepo.GetSeasonXP(userID, season.ID); err == nil {
-			sxp.XP = existing.XP + amount
-		} else {
-			sxp.XP = amount
+	if granted == 0 {
+		// Cap already reached — report the current level without changing anything.
+		level := 1
+		if cur, err := s.gamRepo.GetUserXP(userID); err == nil {
+			level = cur.CurrentLevel
 		}
-		_ = s.gamRepo.UpsertSeasonXP(sxp)
+		return 0, level, nil
 	}
 
-	return amount, newLevel, nil
+	// Apply the granted delta atomically to the cumulative and season totals.
+	newTotal, err := s.gamRepo.AddUserXP(userID, granted)
+	if err != nil {
+		return 0, 0, err
+	}
+	newLevel := CalculateLevel(newTotal)
+	_ = s.gamRepo.SetUserLevel(userID, newLevel)
+
+	if season, err := s.gamRepo.GetActiveSeason(); err == nil {
+		_ = s.gamRepo.AddSeasonXP(userID, season.ID, granted)
+	}
+
+	return granted, newLevel, nil
 }
 
 func (s *xpService) GetUserXP(userID uint64) (*models.UserXP, error) {

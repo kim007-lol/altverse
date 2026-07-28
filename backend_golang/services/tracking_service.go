@@ -50,6 +50,6 @@ func (s *trackingService) LogView(episodeID uint64, userID *uint64, ipAddress st
 		UserID:    userID,
 		IPAddress: &ipAddress,
 	}
-	_ = s.episodeRepo.IncrementViews(episodeID)
+	go func() { _ = s.episodeRepo.IncrementViews(episodeID) }()
 	return s.trackingRepo.LogView(log)
 }

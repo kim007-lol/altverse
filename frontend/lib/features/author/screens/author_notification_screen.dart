@@ -30,15 +30,16 @@ class _AuthorNotificationScreenState extends State<AuthorNotificationScreen> {
       final res = await ApiService.get(
         '${ApiEndpoints.notifications}?role=author',
       );
+      if (!mounted) return;
       if (res.success) {
         final json = res.data;
-        if (mounted) {
-          setState(() {
-            _notifications = (json['data'] ?? []) as List;
-            _unreadCount = json['unread_count'] ?? 0;
-            _isLoading = false;
-          });
-        }
+        setState(() {
+          _notifications = (json['data'] ?? []) as List;
+          _unreadCount = json['unread_count'] ?? 0;
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
       }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);

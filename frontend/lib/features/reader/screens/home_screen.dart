@@ -4,8 +4,10 @@ import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 import 'activity_screen.dart';
 import 'series_detail_screen.dart';
+import 'author_profile_screen.dart';
 import 'package:provider/provider.dart';
 import '../../shared/providers/notification_provider.dart';
+import '../../shared/widgets/author_tier_badge.dart';
 import 'missions_screen.dart';
 import 'search_screen.dart';
 
@@ -24,6 +26,12 @@ class _ReaderHomeScreenState extends State<ReaderHomeScreen> {
   final PageController _carouselController = PageController();
   Timer? _carouselTimer;
   int _currentCarousel = 0;
+
+  // Popular Authors follow state. The FYP payload doesn't carry per-viewer
+  // follow status, so cards start as "Follow" and reconcile with the server
+  // response after the first tap.
+  final Set<int> _followingAuthors = {};
+  final Set<int> _togglingAuthors = {};
 
   @override
   void initState() {
@@ -46,14 +54,17 @@ class _ReaderHomeScreenState extends State<ReaderHomeScreen> {
   Future<void> _fetchHome() async {
     try {
       final res = await ApiService.get(ApiEndpoints.fyp);
+      if (!mounted) return;
       if (res.success) {
-        if (mounted) {
-          setState(() {
-            _data = res.data is Map<String, dynamic> ? res.data : {};
-            _isLoading = false;
-          });
-          _startCarouselTimer();
-        }
+        setState(() {
+          _data = res.data is Map<String, dynamic> ? res.data : {};
+          _isLoading = false;
+        });
+        _startCarouselTimer();
+      } else {
+        // Clear the spinner even when the request fails, so the screen can
+        // render its empty/error state instead of spinning forever.
+        setState(() => _isLoading = false);
       }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
@@ -162,6 +173,8 @@ class _ReaderHomeScreenState extends State<ReaderHomeScreen> {
                       ),
                       // ─── Trending ───
                       _buildSection('Trending Now', Icons.local_fire_department, _data['trending'] ?? [], theme),
+                      // ─── Popular Authors ───
+                      _buildPopularAuthors(theme),
                       // ─── For You ───
                       _buildSection('For You', Icons.rocket_launch, _data['recommended'] ?? [], theme),
                       // ─── New Releases ───
@@ -370,6 +383,142 @@ class _ReaderHomeScreenState extends State<ReaderHomeScreen> {
         ),
       ],
     );
+  }
+
+  // ─── Popular Authors Section ───
+  Widget _buildPopularAuthors(ThemeData theme) {
+    final authors = (_data['popular_authors'] ?? []) as List;
+    if (authors.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          child: Text('Popular Authors', style: theme.textTheme.titleLarge),
+        ),
+        SizedBox(
+          height: 196,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: authors.length,
+            itemBuilder: (_, i) => _buildAuthorCard(authors[i], theme),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Author Card (avatar + pen name + tier + follow) ───
+  Widget _buildAuthorCard(dynamic author, ThemeData theme) {
+    final id = author['id'];
+    final penName = (author['pen_name'] as String?)?.trim();
+    final displayName = (penName != null && penName.isNotEmpty) ? penName : 'Unknown';
+    final tier = author['author_tier'] as String?;
+    final avatarUrl = author['avatar_url'] != null ? ApiService.getImageUrl(author['avatar_url']) : null;
+    final isFollowing = id is int && _followingAuthors.contains(id);
+    final isBusy = id is int && _togglingAuthors.contains(id);
+
+    return GestureDetector(
+      onTap: () {
+        if (id is int) {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => AuthorProfileScreen(authorId: id)));
+        }
+      },
+      child: Container(
+        width: 140,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.withAlpha(25),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.withAlpha(50), width: 1),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: theme.cardColor,
+              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+              child: avatarUrl == null
+                  ? Text(
+                      displayName[0].toUpperCase(),
+                      style: theme.textTheme.titleLarge,
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (tier != null) ...[
+                  const SizedBox(width: 4),
+                  AuthorTierBadge(tier: tier, size: 16),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              height: 30,
+              child: OutlinedButton(
+                onPressed: (id is int && !isBusy) ? () => _toggleAuthorFollow(id) : null,
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  backgroundColor: isFollowing ? theme.cardColor : theme.primaryColor,
+                  foregroundColor: isFollowing ? theme.textTheme.bodyMedium?.color : Colors.white,
+                  side: BorderSide(color: isFollowing ? Colors.grey.withAlpha(100) : theme.primaryColor),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: isBusy
+                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text(
+                        isFollowing ? 'Following' : 'Follow',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Toggle follow for a popular-author card, reconciling with the server's
+  // returned state so the label is correct even on the first tap.
+  Future<void> _toggleAuthorFollow(int authorId) async {
+    if (_togglingAuthors.contains(authorId)) return;
+    final wasFollowing = _followingAuthors.contains(authorId);
+
+    setState(() {
+      _togglingAuthors.add(authorId);
+      wasFollowing ? _followingAuthors.remove(authorId) : _followingAuthors.add(authorId);
+    });
+
+    try {
+      final res = await ApiService.post(ApiEndpoints.followToggle(authorId), body: {});
+      if (!mounted) return;
+      final following = (res.success && res.data is Map) ? (res.data['following'] ?? !wasFollowing) : wasFollowing;
+      setState(() => following == true ? _followingAuthors.add(authorId) : _followingAuthors.remove(authorId));
+    } catch (_) {
+      // Revert optimistic change on failure.
+      if (mounted) {
+        setState(() => wasFollowing ? _followingAuthors.add(authorId) : _followingAuthors.remove(authorId));
+      }
+    } finally {
+      if (mounted) setState(() => _togglingAuthors.remove(authorId));
+    }
   }
 
   // ─── Series Card (vertical cover) ───

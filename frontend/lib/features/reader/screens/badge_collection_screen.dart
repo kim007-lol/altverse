@@ -33,7 +33,8 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
     setState(() => _isLoading = true);
     try {
       final res = await ApiService.get(ApiEndpoints.badges);
-      if (res.success && mounted) {
+      if (!mounted) return;
+      if (res.success) {
         final badges = (res.data['badges'] as List?) ?? [];
         final earned = badges.where((b) => b['earned_at'] != null).toList();
         final locked = badges.where((b) => b['earned_at'] == null).toList();
@@ -43,6 +44,8 @@ class _BadgeCollectionScreenState extends State<BadgeCollectionScreen> {
           _lockedBadges = locked;
           _isLoading = false;
         });
+      } else {
+        setState(() => _isLoading = false);
       }
     } catch (e) {
       debugPrint('Error fetching badges: $e');

@@ -17,6 +17,8 @@ class _FollowingScreenState extends State<FollowingScreen> with SingleTickerProv
   bool _isLoading = true;
   bool _isLoadingFollowers = true;
   bool _hasError = false;
+  // User ids with an in-flight follow toggle — blocks double-tap double-fire.
+  final Set<int> _togglingFollow = {};
 
   @override
   void initState() {
@@ -63,14 +65,18 @@ class _FollowingScreenState extends State<FollowingScreen> with SingleTickerProv
   }
 
   Future<void> _toggleFollow(int userId, int index) async {
+    // Ignore re-taps while a toggle for this user is already in flight, so we
+    // never fire twice or remove a stale (shifted) list index.
+    if (_togglingFollow.contains(userId)) return;
+    _togglingFollow.add(userId);
     try {
       final res = await ApiService.post(ApiEndpoints.followToggle(userId), body: {});
       if (res.success && mounted) {
         final data = res.data;
         final isNowFollowing = data['following'] ?? false;
         if (!isNowFollowing) {
-          // Unfollowed — remove from list
-          setState(() => _authors.removeAt(index));
+          // Unfollowed — remove by id (not index, which may have shifted)
+          setState(() => _authors.removeWhere((a) => a['id'] == userId));
           if (mounted) {
             ScaffoldMessenger.of(
               context,
@@ -84,6 +90,8 @@ class _FollowingScreenState extends State<FollowingScreen> with SingleTickerProv
           context,
         ).showSnackBar(const SnackBar(content: Text('Gagal mengubah follow'), backgroundColor: Colors.red));
       }
+    } finally {
+      _togglingFollow.remove(userId);
     }
   }
 

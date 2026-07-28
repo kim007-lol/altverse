@@ -25,10 +25,12 @@ class CommentDrawer extends StatefulWidget {
 
 class _CommentDrawerState extends State<CommentDrawer> {
   final TextEditingController _commentController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
   bool _isLoading = true;
   bool _isSubmitting = false;
   List<dynamic> _comments = [];
   String _sort = 'top';
+  Map<String, dynamic>? _replyingTo;
 
   @override
   void initState() {
@@ -39,6 +41,7 @@ class _CommentDrawerState extends State<CommentDrawer> {
   @override
   void dispose() {
     _commentController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -65,18 +68,31 @@ class _CommentDrawerState extends State<CommentDrawer> {
     }
   }
 
+  void _startReply(Map<String, dynamic> comment) {
+    setState(() => _replyingTo = comment);
+    _focusNode.requestFocus();
+  }
+
+  void _cancelReply() {
+    setState(() => _replyingTo = null);
+  }
+
   Future<void> _postComment() async {
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
 
     setState(() => _isSubmitting = true);
+    final parentId = _replyingTo?['id'];
     try {
+      final body = <String, dynamic>{'content': text};
+      if (parentId != null) body['parent_id'] = parentId;
       final res = await ApiService.post(
-        ApiEndpoints.episodeComments(widget.episodeId), body: {'body': text},
+        ApiEndpoints.episodeComments(widget.episodeId), body: body,
       );
 
       if (res.success) {
         _commentController.clear();
+        setState(() => _replyingTo = null);
         _fetchComments();
       } else {
         final error =
@@ -374,12 +390,13 @@ class _CommentDrawerState extends State<CommentDrawer> {
                                         ),
                                         const SizedBox(width: 24),
                                         GestureDetector(
-                                          onTap: () {},
+                                          onTap: () => _startReply(Map<String, dynamic>.from(c)),
                                           child: Text(
                                             'Reply',
                                             style: TextStyle(
-                                              color: Colors.grey[500],
+                                              color: theme.primaryColor,
                                               fontSize: 12,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                         ),
@@ -396,58 +413,84 @@ class _CommentDrawerState extends State<CommentDrawer> {
 
               // Input Area
               Container(
-                padding: EdgeInsets.only(
-                  left: 16,
-                  right: 8,
-                  top: 8,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 8,
-                ),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF2A2A3E) : Colors.grey[100],
                   border: Border(
                     top: BorderSide(color: Colors.grey.withAlpha(50)),
                   ),
                 ),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _commentController,
-                        decoration: InputDecoration(
-                          hintText: 'Tulis komentar...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: isDark
-                              ? const Color(0xFF1A1A2E)
-                              : Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          isDense: true,
+                    // Reply indicator chip
+                    if (_replyingTo != null)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
+                        child: Row(
+                          children: [
+                            Icon(Icons.reply_rounded, size: 14, color: theme.primaryColor),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Membalas ${_replyingTo!['user']?['name'] ?? 'komentar'}',
+                                style: TextStyle(fontSize: 12, color: theme.primaryColor, fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: _cancelReply,
+                              child: Icon(Icons.close, size: 16, color: Colors.grey[500]),
+                            ),
+                          ],
                         ),
-                        maxLines: null,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _postComment(),
+                      ),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: 16,
+                        right: 8,
+                        top: 8,
+                        bottom: MediaQuery.of(context).viewInsets.bottom + 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _commentController,
+                              focusNode: _focusNode,
+                              decoration: InputDecoration(
+                                hintText: _replyingTo != null ? 'Tulis balasan...' : 'Tulis komentar...',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                isDense: true,
+                              ),
+                              maxLines: null,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) => _postComment(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _isSubmitting
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                )
+                              : IconButton(
+                                  icon: Icon(Icons.send, color: theme.primaryColor),
+                                  onPressed: _postComment,
+                                ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    _isSubmitting
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : IconButton(
-                            icon: Icon(Icons.send, color: theme.primaryColor),
-                            onPressed: _postComment,
-                          ),
                   ],
                 ),
               ),

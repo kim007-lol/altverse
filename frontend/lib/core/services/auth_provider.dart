@@ -77,11 +77,12 @@ class AuthProvider extends ChangeNotifier {
       final data = response.data;
 
       if (response.success) {
-        _token = data['token'];
+        _token = data['access_token'];
         _user = data['user'];
         _isLoggedIn = true;
-        // Sync token to ApiService so HTTP requests include Bearer header
+        // Sync tokens to ApiService (register now issues a token pair too).
         if (_token != null) await _api.setToken(_token!);
+        if (data['refresh_token'] != null) await _api.setRefreshToken(data['refresh_token']);
         await _saveSession();
         notifyListeners();
         return true;
@@ -111,14 +112,16 @@ class AuthProvider extends ChangeNotifier {
       final data = response.data;
 
       if (response.success) {
-        _token = data['token'];
+        _token = data['access_token'];
         _user = data['user'];
         _isLoggedIn = true;
         _primaryColor = AppTheme.getColorFromHex(_user?['theme_color']);
         _themeMode = (_user?['theme_preference'] == 'light') ? ThemeMode.light : ThemeMode.dark;
         await _saveLocalTheme();
-        // Sync token to ApiService so HTTP requests include Bearer header
+        // Sync tokens to ApiService so HTTP requests include Bearer header and
+        // can auto-refresh when the access token expires.
         if (_token != null) await _api.setToken(_token!);
+        if (data['refresh_token'] != null) await _api.setRefreshToken(data['refresh_token']);
         await _saveSession();
         // Connect to Go WebSocket for real-time notifications
         WebSocketService().connect();
@@ -162,15 +165,17 @@ class AuthProvider extends ChangeNotifier {
 
     _token = savedToken;
     _user = jsonDecode(savedUser);
-    // Sync saved token to ApiService so /auth/me request includes Bearer header
+    // Sync saved tokens to ApiService so /auth/me includes the Bearer header
+    // and a 401 can auto-refresh instead of forcing logout.
     await _api.setToken(savedToken);
+    await _api.loadRefreshToken();
 
-    // Verify token is still valid by calling /auth/me
+    // Verify token is still valid by calling /auth/me (returns the user at data root)
     try {
       final response = await ApiService.get('auth/me');
       if (response.success) {
         final data = response.data;
-        _user = data['user'];
+        _user = data is Map<String, dynamic> ? data : _user;
         _isLoggedIn = true;
         _primaryColor = AppTheme.getColorFromHex(_user?['theme_color']);
         _themeMode = (_user?['theme_preference'] == 'light') ? ThemeMode.light : ThemeMode.dark;
@@ -199,7 +204,7 @@ class AuthProvider extends ChangeNotifier {
       final response = await ApiService.get('auth/me');
       if (response.success) {
         final data = response.data;
-        _user = data['user'];
+        if (data is Map<String, dynamic>) _user = data;
         _primaryColor = AppTheme.getColorFromHex(_user?['theme_color']);
         _themeMode = (_user?['theme_preference'] == 'light') ? ThemeMode.light : ThemeMode.dark;
         await _saveLocalTheme();

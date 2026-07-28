@@ -17,6 +17,7 @@ import (
 	"aureader/backend/internal/database"
 	internalRedis "aureader/backend/internal/redis"
 	"aureader/backend/middleware"
+	"aureader/backend/models"
 	"aureader/backend/repositories"
 	"aureader/backend/routes"
 	"aureader/backend/scheduler"
@@ -33,6 +34,14 @@ func main() {
 	db := database.Connect(cfg)
 	rdb := internalRedis.Connect(cfg)
 	defer rdb.Close()
+
+	// Create/sync tables and indexes.
+	if err := db.AutoMigrate(&models.AuditLog{}); err != nil {
+		log.Printf("[DB] AutoMigrate AuditLog warning: %v", err)
+	}
+	if err := db.AutoMigrate(&models.User{}, &models.Series{}, &models.Episode{}); err != nil {
+		log.Printf("[DB] AutoMigrate indexes warning: %v", err)
+	}
 
 	// ── Repositories ──────────────────────────────────────────────────────────
 	userRepo    := repositories.NewUserRepository(db)
@@ -78,16 +87,27 @@ func main() {
 
 	// ── Controllers ───────────────────────────────────────────────────────────
 	ctrl := routes.Controllers{
-		Auth:       sharedCtrl.NewAuthController(authSvc),
+		Auth:       sharedCtrl.NewAuthController(authSvc, userRepo),
 		Profile:    readerCtrl.NewProfileController(userSvc),
-		Discover:   readerCtrl.NewDiscoverController(seriesSvc, episodeSvc),
+		Discover:   readerCtrl.NewDiscoverController(seriesSvc, episodeSvc, trackingSvc, userRepo, socialSvc, rdb, db),
 		Reading:    readerCtrl.NewReadingController(episodeSvc, trackingSvc, unlockSvc, socialSvc),
-		Social:     readerCtrl.NewSocialController(socialSvc),
-		Wallet:     readerCtrl.NewWalletController(txSvc, userSvc),
+		Social:     readerCtrl.NewSocialController(socialSvc, db),
+		Wallet:     readerCtrl.NewWalletController(txSvc, userSvc, notifSvc, userRepo, db),
 		AuthSeries: authorCtrl.NewSeriesController(seriesSvc),
 		AuthEp:     authorCtrl.NewEpisodeController(episodeSvc),
-		AdminWd:    adminCtrl.NewWithdrawalController(txSvc),
-		Gam:        gamCtrl.NewController(xpSvc, missionSvc, badgeSvc, leaderboardSvc),
+		AdminWd:        adminCtrl.NewWithdrawalController(txSvc, db),
+		AdminDash:      adminCtrl.NewDashboardController(db),
+		AdminUser:      adminCtrl.NewUserController(db),
+		AdminContent:   adminCtrl.NewContentController(db),
+		AdminReport:    adminCtrl.NewReportController(db),
+		AdminSettings:  adminCtrl.NewSettingsController(),
+		AdminCoin:      adminCtrl.NewCoinController(db, userSvc),
+		AdminBroadcast: adminCtrl.NewBroadcastController(db, notifSvc),
+		AdminAudit:     adminCtrl.NewAuditController(db),
+		AdminSeason:    adminCtrl.NewSeasonController(db),
+		AdminFinance:   adminCtrl.NewFinanceController(db),
+		DB:             db,
+		Gam:            gamCtrl.NewController(xpSvc, missionSvc, badgeSvc, leaderboardSvc, db),
 		Image:      imageCtrl,
 		Notif:      readerCtrl.NewNotificationController(notifSvc),
 		Unlock:     readerCtrl.NewUnlockController(unlockSvc),

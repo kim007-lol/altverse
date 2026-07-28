@@ -41,15 +41,16 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Future<void> _fetch() async {
     try {
       final res = await ApiService.get('${ApiEndpoints.notifications}?role=reader');
+      if (!mounted) return;
       if (res.success) {
         final json = res.data;
-        if (mounted) {
-          setState(() {
-            _notifications = (json['data'] ?? []) as List;
-            _unreadCount = json['unread_count'] ?? 0;
-            _isLoading = false;
-          });
-        }
+        setState(() {
+          _notifications = (json['data'] ?? []) as List;
+          _unreadCount = json['unread_count'] ?? 0;
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
       }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);

@@ -17,6 +17,8 @@ import 'theme_color_screen.dart';
 import 'badge_collection_screen.dart';
 import 'wallet_screen.dart';
 import '../../shared/screens/reports_screen.dart';
+import '../../shared/screens/settings_screen.dart';
+import '../../shared/screens/help_center_screen.dart';
 
 class ReaderProfileScreen extends StatefulWidget {
   final int userId;
@@ -318,13 +320,17 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                    color: theme.textTheme.displayLarge?.color,
+                Flexible(
+                  child: Text(
+                    name,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      color: theme.textTheme.displayLarge?.color,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -692,13 +698,13 @@ class _ReaderProfileScreenState extends State<ReaderProfileScreen> with SingleTi
                 icon: Icons.settings_rounded,
                 iconColor: Colors.grey[700]!,
                 title: 'Settings',
-                onTap: () {}, // Navigate to settings
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
               ),
               _buildListTile(
                 icon: Icons.help_rounded,
                 iconColor: Colors.grey[700]!,
                 title: 'Help Center',
-                onTap: () {},
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpCenterScreen())),
               ),
               _buildListTile(
                 icon: Icons.logout_rounded,

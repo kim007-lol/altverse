@@ -5,6 +5,8 @@ import '../../../core/services/api_service.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../shared/providers/notification_provider.dart';
 import '../../../core/services/auth_provider.dart';
+import '../../reader/screens/series_detail_screen.dart';
+import '../../reader/screens/reader_profile_screen.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -79,12 +81,63 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (response.success) {
         if (mounted) {
           setState(() {
-            _notifications[index]['is_read'] = 1; // Mark local as read
+            _notifications[index]['is_read'] = true; // backend serializes is_read as bool
           });
           context.read<NotificationProvider>().decrementUnreadCount();
         }
       }
     } catch (_) {}
+  }
+
+  // Navigate to the relevant in-app screen based on the notification type.
+  // The backend stores a `data` JSONB field on each notification — we read
+  // entity IDs from it so we never navigate blindly.
+  void _navigateFromNotif(Map<String, dynamic> notif) {
+    final type = notif['type'] as String? ?? '';
+    final data = (notif['data'] is Map<String, dynamic>)
+        ? notif['data'] as Map<String, dynamic>
+        : <String, dynamic>{};
+
+    final seriesId = data['series_id'];
+    final userId = data['user_id'] ?? data['follower_id'];
+
+    switch (type) {
+      case 'new_episode':
+      case 'series_like':
+        if (seriesId != null) {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => SeriesDetailScreen(seriesId: seriesId is int ? seriesId : int.tryParse(seriesId.toString()) ?? 0)));
+        }
+        break;
+      case 'new_follower':
+        if (userId != null) {
+          final uid = userId is int ? userId : int.tryParse(userId.toString()) ?? 0;
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => ReaderProfileScreen(userId: uid)));
+        }
+        break;
+      case 'tip_received':
+        // Tip comes from a reader — show their profile if we have it.
+        if (userId != null) {
+          final uid = userId is int ? userId : int.tryParse(userId.toString()) ?? 0;
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => ReaderProfileScreen(userId: uid)));
+        }
+        break;
+      case 'new_comment':
+      case 'comment_reply':
+      case 'comment_like':
+      case 'episode_like':
+      case 'episode_unlock':
+        if (seriesId != null) {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => SeriesDetailScreen(seriesId: seriesId is int ? seriesId : int.tryParse(seriesId.toString()) ?? 0)));
+        }
+        break;
+      default:
+        // badge_earned, level_up, mission_complete, daily_reward — no deep link needed.
+        break;
+    }
   }
 
   String _formatTime(String? dateString) {
@@ -261,7 +314,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     if (isUnread) {
                       _markRead(notif['id'].toString(), i);
                     }
-                    // TODO: Specific navigation based on notification type
+                    _navigateFromNotif(Map<String, dynamic>.from(notif));
                   },
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 10),

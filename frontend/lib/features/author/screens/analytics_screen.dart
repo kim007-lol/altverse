@@ -43,6 +43,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         ApiService.get(ApiEndpoints.authorAnalyticsTopEpisodes),
       ]);
 
+      if (!mounted) return;
       final overviewResp = results[0];
       final trendResp = results[1];
       final topSeriesResp = results[2];
@@ -67,7 +68,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

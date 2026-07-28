@@ -25,10 +25,10 @@ type Series struct {
 	Synopsis   *string    `gorm:"type:text"                                    json:"synopsis"`
 	CoverURL   *string    `gorm:"type:varchar(512)"                            json:"cover_url"`
 	BannerURL  *string    `gorm:"type:varchar(512)"                            json:"banner_url"`
-	Type       string     `gorm:"type:cnt_series_type;not null;default:manga"  json:"type"`
-	Status     string     `gorm:"type:cnt_series_status;not null;default:draft" json:"status"`
-	TotalViews int64      `gorm:"not null;default:0"                           json:"total_views"`
-	TotalLikes int64      `gorm:"not null;default:0"                           json:"total_likes"`
+	Type       string     `gorm:"type:cnt_series_type;not null;default:manga"            json:"type"`
+	Status     string     `gorm:"type:cnt_series_status;not null;default:draft;index"    json:"status"`
+	TotalViews int64      `gorm:"not null;default:0;index:idx_series_views,sort:desc"    json:"total_views"`
+	TotalLikes int64      `gorm:"not null;default:0"                                     json:"total_likes"`
 	CreatedAt  time.Time  `gorm:"autoCreateTime"                               json:"created_at"`
 	UpdatedAt  time.Time  `gorm:"autoUpdateTime"                               json:"updated_at"`
 	DeletedAt  *time.Time `gorm:"index"                                        json:"deleted_at,omitempty"`
@@ -46,7 +46,7 @@ type Episode struct {
 	Title         string     `gorm:"type:varchar(512);not null"                     json:"title"`
 	EpisodeNumber float64    `gorm:"type:numeric(8,2);not null"                     json:"episode_number"`
 	PriceCoins    int        `gorm:"not null;default:0"                             json:"coin_price"`
-	Status        string     `gorm:"type:cnt_episode_status;not null;default:draft" json:"status"`
+	Status        string     `gorm:"type:cnt_episode_status;not null;default:draft;index" json:"status"`
 	PublishedAt   *time.Time `                                                       json:"published_at"`
 	TotalViews    int64      `gorm:"not null;default:0"                             json:"total_views"`
 	CreatedAt     time.Time  `gorm:"autoCreateTime"                                 json:"created_at"`

@@ -30,9 +30,9 @@ type Config struct {
 	RedisDB       int
 
 	// JWT
-	JWTSecret           string
-	JWTAccessExpMinutes int
-	JWTRefreshExpDays   int
+	JWTSecret            string
+	JWTAccessExpMinutes  int
+	JWTRefreshExpDays    int
 
 	// Cloudflare R2
 	R2AccountID       string
@@ -43,10 +43,10 @@ type Config struct {
 	R2Endpoint        string
 
 	// Midtrans
-	MidtransMerchantID string
-	MidtransServerKey  string
-	MidtransClientKey  string
-	MidtransProduction bool
+	MidtransMerchantID  string
+	MidtransServerKey   string
+	MidtransClientKey   string
+	MidtransProduction  bool
 
 	// Rate Limiting
 	RateLimitRequests int
@@ -75,7 +75,7 @@ func Load() *Config {
 		DBHost:     getEnv("DB_HOST", "127.0.0.1"),
 		DBPort:     getEnv("DB_PORT", "5432"),
 		DBUser:     getEnv("DB_USER", "postgres"),
-		DBPassword: getEnv("DB_PASSWORD", "hakim"),
+		DBPassword: getEnv("DB_PASSWORD", ""),
 		DBName:     getEnv("DB_NAME", "au_reader"),
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 

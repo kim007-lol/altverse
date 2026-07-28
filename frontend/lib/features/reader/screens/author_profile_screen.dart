@@ -14,6 +14,7 @@ import '../../../shared/widgets/au_card.dart';
 import '../../shared/widgets/author_tier_badge.dart';
 import 'series_detail_screen.dart';
 import 'theme_color_screen.dart';
+import 'reader_profile_screen.dart';
 
 class AuthorProfileScreen extends StatefulWidget {
   final int authorId;
@@ -100,6 +101,45 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
         setState(() => _isFollowing = was);
       }
     }
+  }
+
+  void _showTipSheet(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final myCoins = authProvider.user?['coins'] ?? 0;
+    final penName = _author?['pen_name'] ?? 'Author';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _TipSheet(
+        authorId: widget.authorId,
+        penName: penName,
+        myCoins: myCoins is int ? myCoins : int.tryParse('$myCoins') ?? 0,
+        onSuccess: (remaining) {
+          // Refresh auth profile so coin balance everywhere updates.
+          authProvider.refreshProfile();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Tip terkirim! Sisa koin: $remaining'),
+                backgroundColor: Colors.green[600],
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  void _showNotifPrefsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => const _NotifPrefsSheet(),
+    );
   }
 
   String _formatCount(dynamic count) {
@@ -302,17 +342,21 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      penName,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                        color: theme.textTheme.displayLarge?.color,
-                        shadows: [
-                          Shadow(color: theme.scaffoldBackgroundColor, blurRadius: 8),
-                          Shadow(color: theme.scaffoldBackgroundColor, blurRadius: 24),
-                        ],
+                    Flexible(
+                      child: Text(
+                        penName,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                          color: theme.textTheme.displayLarge?.color,
+                          shadows: [
+                            Shadow(color: theme.scaffoldBackgroundColor, blurRadius: 8),
+                            Shadow(color: theme.scaffoldBackgroundColor, blurRadius: 24),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -484,9 +528,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                           if (canTip) ...[
                             const SizedBox(width: 12),
                             OutlinedButton.icon(
-                              onPressed: () {
-                                // TODO: navigate to tip screen
-                              },
+                              onPressed: () => _showTipSheet(context),
                               icon: const Icon(Icons.monetization_on_rounded, size: 18),
                               label: const Text('Tip', style: TextStyle(fontWeight: FontWeight.bold)),
                               style: OutlinedButton.styleFrom(
@@ -553,10 +595,11 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ThemeColorScreen())),
                   ),
                   _buildSettingsTile(
-                    icon: Icons.settings_rounded,
-                    iconColor: Colors.grey[700]!,
-                    title: 'Settings',
-                    onTap: () {},
+                    icon: Icons.notifications_outlined,
+                    iconColor: Colors.blue[700]!,
+                    title: 'Notifikasi',
+                    subtitle: 'Kelola preferensi notifikasi',
+                    onTap: () => _showNotifPrefsSheet(context),
                   ),
                   _buildSettingsTile(
                     icon: Icons.logout_rounded,
@@ -790,8 +833,17 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
         final user = sup['user'] ?? {};
         final total = sup['total_spend'] ?? 0;
         final sAvatar = ApiService.getImageUrl(user['avatar_url']);
+        final supporterId = user['id'] is int ? user['id'] as int : int.tryParse('${user['id']}');
 
-        return Container(
+        return InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: supporterId == null
+              ? null
+              : () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => ReaderProfileScreen(userId: supporterId)),
+                  ),
+          child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -837,6 +889,7 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
               Icon(Icons.monetization_on, color: Colors.amber[600], size: 20),
             ],
           ),
+        ),
         );
       },
     );
@@ -1338,6 +1391,327 @@ class _AuthorProfileScreenState extends State<AuthorProfileScreen> with SingleTi
     return '';
   }
 
+}
+
+// ─── Notification Preferences bottom sheet ───
+class _NotifPrefsSheet extends StatefulWidget {
+  const _NotifPrefsSheet();
+
+  @override
+  State<_NotifPrefsSheet> createState() => _NotifPrefsSheetState();
+}
+
+class _NotifPrefsSheetState extends State<_NotifPrefsSheet> {
+  bool _isLoading = true;
+  bool _isSaving = false;
+  Map<String, bool> _prefs = {};
+
+  static const _labels = {
+    'new_episode': 'Episode baru dari author yang diikuti',
+    'new_follower': 'Follower baru',
+    'series_like': 'Suka pada series',
+    'new_comment': 'Komentar baru',
+    'comment_reply': 'Balasan komentar',
+    'tip_received': 'Tip diterima',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch();
+  }
+
+  Future<void> _fetch() async {
+    try {
+      final res = await ApiService.get(ApiEndpoints.notificationPreferences);
+      if (res.success && mounted) {
+        final data = res.data;
+        final map = <String, bool>{};
+        if (data is Map) {
+          data.forEach((k, v) => map[k.toString()] = v == true);
+        }
+        setState(() {
+          _prefs = map;
+          _isLoading = false;
+        });
+      } else if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _save() async {
+    setState(() => _isSaving = true);
+    try {
+      await ApiService.put(ApiEndpoints.notificationPreferences, body: _prefs);
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Icon(Icons.notifications_outlined, color: theme.primaryColor),
+              const SizedBox(width: 10),
+              const Text('Preferensi Notifikasi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator())
+          else
+            ..._labels.entries.map((e) => SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(e.value, style: const TextStyle(fontSize: 14)),
+              value: _prefs[e.key] ?? true,
+              activeThumbColor: theme.primaryColor,
+              onChanged: (v) => setState(() => _prefs[e.key] = v),
+            )),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _isSaving ? null : _save,
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: _isSaving
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Tip bottom sheet ───
+class _TipSheet extends StatefulWidget {
+  final int authorId;
+  final String penName;
+  final int myCoins;
+  final void Function(int remaining) onSuccess;
+
+  const _TipSheet({
+    required this.authorId,
+    required this.penName,
+    required this.myCoins,
+    required this.onSuccess,
+  });
+
+  @override
+  State<_TipSheet> createState() => _TipSheetState();
+}
+
+class _TipSheetState extends State<_TipSheet> {
+  static const _amounts = [10, 50, 100, 500, 1000];
+  int _selected = 50;
+  final _msgCtrl = TextEditingController();
+  bool _isSending = false;
+
+  @override
+  void dispose() {
+    _msgCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    if (_selected > widget.myCoins) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Koin tidak cukup'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    setState(() => _isSending = true);
+    try {
+      final body = <String, dynamic>{
+        'author_id': widget.authorId,
+        'amount': _selected,
+      };
+      if (_msgCtrl.text.trim().isNotEmpty) body['message'] = _msgCtrl.text.trim();
+
+      final res = await ApiService.post(ApiEndpoints.tip, body: body);
+      if (!mounted) return;
+
+      if (res.success) {
+        final remaining = res.data?['coins_remaining'] ?? 0;
+        Navigator.pop(context);
+        widget.onSuccess(remaining is int ? remaining : int.tryParse('$remaining') ?? 0);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final canAfford = _selected <= widget.myCoins;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Title
+          Row(
+            children: [
+              Icon(Icons.monetization_on_rounded, color: Colors.orange[600], size: 26),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Kirim Tip ke ${widget.penName}',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Saldo koin kamu: ${widget.myCoins} koin',
+            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+          ),
+          const SizedBox(height: 20),
+
+          // Amount selector
+          Text('Pilih jumlah koin', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: theme.textTheme.bodyLarge?.color)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: _amounts.map((amt) {
+              final selected = _selected == amt;
+              final affordable = amt <= widget.myCoins;
+              return GestureDetector(
+                onTap: affordable ? () => setState(() => _selected = amt) : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? Colors.orange[600]
+                        : affordable
+                            ? theme.cardColor
+                            : Colors.grey.withAlpha(40),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: selected ? Colors.orange[600]! : affordable ? Colors.grey.withAlpha(60) : Colors.transparent,
+                      width: selected ? 2 : 1,
+                    ),
+                    boxShadow: selected
+                        ? [BoxShadow(color: Colors.orange.withAlpha(60), blurRadius: 8, offset: const Offset(0, 3))]
+                        : [],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.monetization_on_rounded,
+                        size: 16,
+                        color: selected ? Colors.white : affordable ? Colors.orange[600] : Colors.grey[400],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$amt',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: selected ? Colors.white : affordable ? theme.textTheme.bodyLarge?.color : Colors.grey[400],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+
+          // Optional message
+          TextField(
+            controller: _msgCtrl,
+            maxLines: 2,
+            maxLength: 150,
+            style: const TextStyle(fontSize: 14),
+            decoration: InputDecoration(
+              labelText: 'Pesan (opsional)',
+              hintText: 'Tulis pesan untuk ${widget.penName}...',
+              filled: true,
+              fillColor: theme.cardColor,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              counterStyle: TextStyle(fontSize: 11, color: Colors.grey[400]),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Send button
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _isSending || !canAfford ? null : _send,
+              icon: _isSending
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.send_rounded, size: 18),
+              label: Text(
+                _isSending ? 'Mengirim...' : canAfford ? 'Kirim $_selected Koin' : 'Koin Tidak Cukup',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: canAfford ? Colors.orange[600] : Colors.grey[400],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Tab bar delegate for sticky tabs ───

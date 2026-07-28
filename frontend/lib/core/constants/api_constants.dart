@@ -1,18 +1,11 @@
-// Imports removed
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiConstants {
-  // Base URL - menggunakan IP Address lokal agar bisa diakses dari HP fisik via USB/WiFi
-  static String get baseUrl {
-    // Ganti dengan IP lokal komputermu jika berubah
-    const String localIp = '127.0.0.1'; 
-    return 'http://$localIp:8000/api/v1';
-  }
+  static String get baseUrl =>
+      dotenv.env['API_BASE_URL'] ?? 'http://10.20.10.52:8000/api/v1';
 
-  // Go Image Proxy — served by the main Go server (port 8000) at /images/*
-  static String get imageBaseUrl {
-    const String localIp = '127.0.0.1';
-    return 'http://$localIp:8000';
-  }
+  static String get imageBaseUrl =>
+      dotenv.env['API_IMAGE_URL'] ?? 'http://10.20.10.52:8000';
   
 
   // Auth endpoints
@@ -136,13 +129,4 @@ class ApiConstants {
   
   // Withdrawal (Author)
   static const String withdrawals = '/author/withdrawals';
-  // Admin endpoints
-  static const String adminWithdrawals = 'admin/withdrawals';
-  static String processWithdrawal(int id) => 'admin/withdrawals/$id/process';
-  static const String adminDashboard = 'admin/dashboard';
-  static const String adminUsers = 'admin/users';
-  static String adminUserStatus(int id) => 'admin/users/$id/status';
-  static const String adminReports = 'admin/reports';
-  static String adminReportResolve(int id) => 'admin/reports/$id/resolve';
-  static const String adminSettings = 'admin/settings';
 }

@@ -9,24 +9,58 @@ import (
 	"aureader/backend/services"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type WithdrawalController struct {
 	txSvc services.TransactionService
+	db    *gorm.DB
 }
 
-func NewWithdrawalController(txSvc services.TransactionService) *WithdrawalController {
-	return &WithdrawalController{txSvc: txSvc}
+func NewWithdrawalController(txSvc services.TransactionService, db *gorm.DB) *WithdrawalController {
+	return &WithdrawalController{txSvc: txSvc, db: db}
 }
 
-func (h *WithdrawalController) ListPending(c *gin.Context) {
+// ListWithdrawals returns withdrawal requests with author name.
+// Query param: status = pending | success | rejected (default: all)
+func (h *WithdrawalController) ListWithdrawals(c *gin.Context) {
 	page, perPage := controllers.PaginationParams(c)
-	withdrawals, total, err := h.txSvc.GetPendingWithdrawals(page, perPage)
-	if err != nil {
-		controllers.HandleErr(c, err)
-		return
+	status := c.Query("status")
+
+	type row struct {
+		ID            uint64  `gorm:"column:id"             json:"id"`
+		UserID        uint64  `gorm:"column:user_id"        json:"user_id"`
+		AuthorName    string  `gorm:"column:author_name"    json:"author_name"`
+		AmountIDR     float64 `gorm:"column:amount_idr"     json:"amount_idr"`
+		BankName      string  `gorm:"column:bank_name"      json:"bank_name"`
+		AccountNumber string  `gorm:"column:account_number" json:"account_number"`
+		AccountName   string  `gorm:"column:account_name"   json:"account_name"`
+		Status        string  `gorm:"column:status"         json:"status"`
+		Notes         *string `gorm:"column:notes"          json:"notes"`
+		CreatedAt     string  `gorm:"column:created_at"     json:"created_at"`
 	}
-	helper.Paginated(c, "Pending withdrawals fetched", withdrawals, page, perPage, total)
+
+	query := h.db.Table("trx_withdrawals w").
+		Select("w.id, w.user_id, u.name AS author_name, w.amount_idr, w.bank_name, w.account_number, w.account_name, w.status, w.notes, TO_CHAR(w.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS created_at").
+		Joins("LEFT JOIN usr_users u ON u.id = w.user_id")
+
+	if status != "" {
+		query = query.Where("w.status = ?", status)
+	}
+
+	var total int64
+	countQ := h.db.Table("trx_withdrawals")
+	if status != "" {
+		countQ = countQ.Where("status = ?", status)
+	}
+	countQ.Count(&total)
+
+	var rows []row
+	query.Order("w.created_at DESC").
+		Offset((page - 1) * perPage).Limit(perPage).
+		Scan(&rows)
+
+	helper.Paginated(c, "Withdrawals fetched", rows, page, perPage, total)
 }
 
 func (h *WithdrawalController) Process(c *gin.Context) {

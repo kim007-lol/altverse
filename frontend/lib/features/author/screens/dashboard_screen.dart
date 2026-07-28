@@ -41,6 +41,7 @@ class AuthorDashboardScreenState extends State<AuthorDashboardScreen> {
         ApiService.get(ApiEndpoints.authorDashboard),
         ApiService.get(ApiEndpoints.authorSeries),
       ]);
+      if (!mounted) return;
 
       final dashResponse = results[0];
       final seriesResponse = results[1];
@@ -77,6 +78,7 @@ class AuthorDashboardScreenState extends State<AuthorDashboardScreen> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage =
             'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';

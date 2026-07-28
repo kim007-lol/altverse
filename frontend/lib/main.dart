@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routing/app_router.dart';
@@ -6,8 +7,9 @@ import 'core/services/auth_provider.dart';
 import 'features/gamification/providers/mission_provider.dart';
 import 'features/shared/providers/notification_provider.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
   runApp(
     MultiProvider(
       providers: [

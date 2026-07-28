@@ -5,7 +5,7 @@ class ApiEndpoints {
 
   // ─── Auth ───
   // Update to your machine's local IP for physical device testing
-  static const String baseUrl = 'http://127.0.0.1:8000/api/v1';
+  static const String baseUrl = 'http://10.20.10.52:8000/api/v1';
 
   static const String register = 'auth/register';
   static const String login = 'auth/login';
@@ -168,14 +168,4 @@ class ApiEndpoints {
   // ─── Withdrawal (Author) ───
   static const String withdrawals = 'author/withdrawals';
 
-  // ─── Admin ───
-  static const String adminDashboard = 'admin/dashboard';
-  static const String adminUsers = 'admin/users';
-  static String adminUserStatus(int id) => 'admin/users/$id/status';
-  static const String adminWithdrawals = 'admin/withdrawals';
-  static String adminProcessWithdrawal(int id) =>
-      'admin/withdrawals/$id/process';
-  static const String adminReports = 'admin/reports';
-  static String adminReportResolve(int id) => 'admin/reports/$id/resolve';
-  static const String adminSettings = 'admin/settings';
 }

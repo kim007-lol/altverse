@@ -46,7 +46,7 @@ class _MyCommentsScreenState extends State<MyCommentsScreen> {
           } else {
             _comments = dataList;
           }
-          _lastPage = bodyData['last_page'] ?? 1;
+          _lastPage = (bodyData['meta'] as Map?)?['last_page'] ?? 1;
           _isLoading = false;
         });
       } else {
@@ -54,7 +54,13 @@ class _MyCommentsScreenState extends State<MyCommentsScreen> {
       }
     } catch (e) {
       setState(() {
-        if (!loadMore) _hasError = true;
+        // Roll back the optimistic page bump so the failed page is retried,
+        // not skipped, on the next load-more.
+        if (loadMore) {
+          _currentPage--;
+        } else {
+          _hasError = true;
+        }
         _isLoading = false;
       });
     }

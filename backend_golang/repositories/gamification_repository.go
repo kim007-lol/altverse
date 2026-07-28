@@ -15,6 +15,14 @@ type GamificationRepository interface {
 	UpsertUserXP(xp *models.UserXP) error
 	GetDailyXPLog(userID uint64, source string, date time.Time) (*models.DailyXPLog, error)
 	CreateDailyXPLog(log *models.DailyXPLog) error
+	// GrantDailyXP atomically adds up to `amount` XP to the (user, source, date)
+	// daily log without exceeding dailyCap, and returns the XP actually granted.
+	GrantDailyXP(userID uint64, source string, amount, dailyCap int, date time.Time) (granted int, err error)
+	// AddUserXP atomically increments a user's cumulative XP and returns the new total.
+	AddUserXP(userID uint64, delta int) (newTotalXP int, err error)
+	SetUserLevel(userID uint64, level int) error
+	// AddSeasonXP atomically increments a user's XP for the given season.
+	AddSeasonXP(userID, seasonID uint64, delta int) error
 	// Badges
 	GetAllBadges() ([]models.Badge, error)
 	GetBadgeBySlug(slug string) (*models.Badge, error)
@@ -80,6 +88,75 @@ func (r *gamificationRepository) GetDailyXPLog(userID uint64, source string, dat
 
 func (r *gamificationRepository) CreateDailyXPLog(l *models.DailyXPLog) error {
 	return r.db.Create(l).Error
+}
+
+// GrantDailyXP adds up to `amount` XP to the (user, source, date) daily log
+// without exceeding dailyCap (dailyCap <= 0 means unlimited), and returns the
+// delta actually granted (0 once the cap is hit). It serialises concurrent
+// awards on the same key via a row lock so the cap can't be raced past.
+func (r *gamificationRepository) GrantDailyXP(userID uint64, source string, amount, dailyCap int, date time.Time) (int, error) {
+	var granted int
+	day := date.Format("2006-01-02")
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		// Ensure the row exists (idempotent) so it can be locked.
+		if err := tx.Exec(`
+			INSERT INTO gam_daily_xp_logs (user_id, source, xp_earned, log_date)
+			VALUES (?, ?, 0, ?)
+			ON CONFLICT (user_id, source, log_date) DO NOTHING`,
+			userID, source, day).Error; err != nil {
+			return err
+		}
+
+		var prev int
+		if err := tx.Raw(`
+			SELECT xp_earned FROM gam_daily_xp_logs
+			WHERE user_id = ? AND source = ? AND log_date = ? FOR UPDATE`,
+			userID, source, day).Row().Scan(&prev); err != nil {
+			return err
+		}
+
+		newVal := prev + amount
+		if dailyCap > 0 && newVal > dailyCap {
+			newVal = dailyCap
+		}
+		granted = newVal - prev
+		if granted <= 0 {
+			return nil
+		}
+		return tx.Exec(`
+			UPDATE gam_daily_xp_logs SET xp_earned = ?
+			WHERE user_id = ? AND source = ? AND log_date = ?`,
+			newVal, userID, source, day).Error
+	})
+	return granted, err
+}
+
+func (r *gamificationRepository) AddUserXP(userID uint64, delta int) (int, error) {
+	var total int
+	err := r.db.Raw(`
+		INSERT INTO gam_user_xp (user_id, total_xp, current_level, created_at, updated_at)
+		VALUES (?, ?, 1, NOW(), NOW())
+		ON CONFLICT (user_id)
+		DO UPDATE SET total_xp = gam_user_xp.total_xp + EXCLUDED.total_xp, updated_at = NOW()
+		RETURNING total_xp`,
+		userID, delta,
+	).Scan(&total).Error
+	return total, err
+}
+
+func (r *gamificationRepository) SetUserLevel(userID uint64, level int) error {
+	return r.db.Model(&models.UserXP{}).Where("user_id = ?", userID).
+		UpdateColumn("current_level", level).Error
+}
+
+func (r *gamificationRepository) AddSeasonXP(userID, seasonID uint64, delta int) error {
+	return r.db.Exec(`
+		INSERT INTO gam_season_xp (user_id, season_id, xp, created_at, updated_at)
+		VALUES (?, ?, ?, NOW(), NOW())
+		ON CONFLICT (user_id, season_id)
+		DO UPDATE SET xp = gam_season_xp.xp + EXCLUDED.xp, updated_at = NOW()`,
+		userID, seasonID, delta,
+	).Error
 }
 
 // ─── Badges ────────────────────────────────────────────────────────────────

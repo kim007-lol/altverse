@@ -38,20 +38,22 @@ class _WalletScreenState extends State<WalletScreen> {
         ApiService.get(ApiConstants.topupPackages),
         ApiService.get(ApiConstants.topupHistory),
       ]);
+      if (!mounted) return;
       setState(() {
         final dataMap = results[0].data as Map<String, dynamic>?;
         final listData = dataMap?['data'] as List?;
         _packages = listData?.isNotEmpty == true ? listData! : fallbackPackages;
-        
+
         final historyMap = results[1].data as Map<String, dynamic>?;
         _history = historyMap?['data'] ?? [];
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _packages = fallbackPackages;
       });
     }
-    setState(() => _isLoading = false);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _buyPackage(Map<String, dynamic> pkg) async {

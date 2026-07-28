@@ -19,6 +19,8 @@ type UserRepository interface {
 	FindRefreshToken(jti string) (*models.RefreshToken, error)
 	DeleteRefreshToken(jti string) error
 	DeleteAllRefreshTokens(userID uint64) error
+	// FindPopularAuthors returns the top n authors ranked by total follower count.
+	FindPopularAuthors(limit int) ([]models.User, error)
 }
 
 type userRepository struct{ db *gorm.DB }
@@ -73,4 +75,16 @@ func (r *userRepository) DeleteRefreshToken(jti string) error {
 
 func (r *userRepository) DeleteAllRefreshTokens(userID uint64) error {
 	return r.db.Where("user_id = ?", userID).Delete(&models.RefreshToken{}).Error
+}
+
+func (r *userRepository) FindPopularAuthors(limit int) ([]models.User, error) {
+	var users []models.User
+	// Subquery: count followers per author, then join to filter only author-role users.
+	err := r.db.
+		Joins("JOIN (SELECT followed_id, COUNT(*) AS follower_count FROM soc_follows GROUP BY followed_id) fc ON fc.followed_id = users.id").
+		Where("users.role = 'author' AND users.deleted_at IS NULL").
+		Order("fc.follower_count DESC").
+		Limit(limit).
+		Find(&users).Error
+	return users, err
 }

@@ -10,14 +10,16 @@ import (
 	"aureader/backend/services"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type SocialController struct {
 	socialSvc services.SocialService
+	db        *gorm.DB
 }
 
-func NewSocialController(socialSvc services.SocialService) *SocialController {
-	return &SocialController{socialSvc: socialSvc}
+func NewSocialController(socialSvc services.SocialService, db *gorm.DB) *SocialController {
+	return &SocialController{socialSvc: socialSvc, db: db}
 }
 
 func (h *SocialController) Follow(c *gin.Context) {
@@ -299,4 +301,129 @@ func (h *SocialController) DeleteComment(c *gin.Context) {
 		return
 	}
 	helper.NoContent(c, "Comment deleted")
+}
+
+// ToggleCommentLike likes or unlikes a comment. Returns {liked, like_count}.
+func (h *SocialController) ToggleCommentLike(c *gin.Context) {
+	commentID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		helper.BadRequest(c, "invalid comment id", nil)
+		return
+	}
+	userID := uint64(middleware.GetUserID(c))
+
+	var existing struct{ Count int }
+	h.db.Raw("SELECT COUNT(*) AS count FROM soc_comment_likes WHERE user_id = ? AND comment_id = ?", userID, commentID).Scan(&existing)
+
+	liked := existing.Count == 0
+	if liked {
+		h.db.Exec("INSERT INTO soc_comment_likes (user_id, comment_id, created_at) VALUES (?, ?, NOW()) ON CONFLICT DO NOTHING", userID, commentID)
+	} else {
+		h.db.Exec("DELETE FROM soc_comment_likes WHERE user_id = ? AND comment_id = ?", userID, commentID)
+	}
+
+	var likeCount int64
+	h.db.Raw("SELECT COUNT(*) FROM soc_comment_likes WHERE comment_id = ?", commentID).Scan(&likeCount)
+	helper.OK(c, "Comment like toggled", gin.H{"liked": liked, "like_count": likeCount})
+}
+
+// GetMyReports returns the current user's own submitted content reports.
+func (h *SocialController) GetMyReports(c *gin.Context) {
+	userID := uint64(middleware.GetUserID(c))
+	page, perPage := controllers.PaginationParams(c)
+	offset := (page - 1) * perPage
+
+	type row struct {
+		ID         uint64 `gorm:"column:id"          json:"id"`
+		TargetType string `gorm:"column:target_type" json:"target_type"`
+		TargetID   uint64 `gorm:"column:target_id"   json:"target_id"`
+		Reason     string `gorm:"column:reason"      json:"reason"`
+		Status     string `gorm:"column:status"      json:"status"`
+		CreatedAt  string `gorm:"column:created_at"  json:"created_at"`
+	}
+
+	var total int64
+	h.db.Table("soc_reports").Where("reporter_id = ?", userID).Count(&total)
+
+	var rows []row
+	h.db.Table("soc_reports").
+		Select("id, target_type, target_id, reason, status, created_at").
+		Where("reporter_id = ?", userID).
+		Order("created_at DESC").Offset(offset).Limit(perPage).Scan(&rows)
+
+	lastPage := 1
+	if perPage > 0 && total > 0 {
+		lastPage = int((total + int64(perPage) - 1) / int64(perPage))
+	}
+
+	helper.OK(c, "Reports fetched", gin.H{
+		"data": rows,
+		"meta": gin.H{"total": total, "page": page, "per_page": perPage, "last_page": lastPage},
+	})
+}
+
+// DeleteReport removes a report submitted by the current user.
+func (h *SocialController) DeleteReport(c *gin.Context) {
+	reportID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		helper.BadRequest(c, "invalid report id", nil)
+		return
+	}
+	userID := uint64(middleware.GetUserID(c))
+
+	result := h.db.Exec("DELETE FROM soc_reports WHERE id = ? AND reporter_id = ?", reportID, userID)
+	if result.RowsAffected == 0 {
+		helper.NotFound(c, "report not found")
+		return
+	}
+	helper.NoContent(c, "Report deleted")
+}
+
+// GetMyComments returns the current user's comments with episode and series context.
+func (h *SocialController) GetMyComments(c *gin.Context) {
+	userID := uint64(middleware.GetUserID(c))
+	page, perPage := controllers.PaginationParams(c)
+	offset := (page - 1) * perPage
+
+	type row struct {
+		ID            uint64 `gorm:"column:id"             json:"id"`
+		Content       string `gorm:"column:content"        json:"content"`
+		CreatedAt     string `gorm:"column:created_at"     json:"created_at"`
+		EpisodeID     uint64 `gorm:"column:episode_id"     json:"episode_id"`
+		EpisodeTitle  string `gorm:"column:episode_title"  json:"episode_title"`
+		EpisodeNumber float64 `gorm:"column:episode_number" json:"episode_number"`
+		SeriesID      uint64 `gorm:"column:series_id"      json:"series_id"`
+		SeriesTitle   string `gorm:"column:series_title"   json:"series_title"`
+		SeriesCover   *string `gorm:"column:series_cover"  json:"cover_url"`
+	}
+
+	var total int64
+	h.db.Table("soc_comments c").
+		Joins("JOIN cnt_episodes ep ON ep.id = c.episode_id").
+		Joins("JOIN cnt_series s ON s.id = ep.series_id").
+		Where("c.user_id = ? AND c.deleted_at IS NULL", userID).
+		Count(&total)
+
+	var rows []row
+	h.db.Table("soc_comments c").
+		Select("c.id, c.content, c.created_at, c.episode_id, ep.title AS episode_title, ep.episode_number, s.id AS series_id, s.title AS series_title, s.cover_url AS series_cover").
+		Joins("JOIN cnt_episodes ep ON ep.id = c.episode_id").
+		Joins("JOIN cnt_series s ON s.id = ep.series_id").
+		Where("c.user_id = ? AND c.deleted_at IS NULL", userID).
+		Order("c.created_at DESC").Offset(offset).Limit(perPage).Scan(&rows)
+
+	lastPage := 1
+	if perPage > 0 && total > 0 {
+		lastPage = int((total + int64(perPage) - 1) / int64(perPage))
+	}
+
+	helper.OK(c, "Comments fetched", gin.H{
+		"data": rows,
+		"meta": gin.H{
+			"total":     total,
+			"page":      page,
+			"per_page":  perPage,
+			"last_page": lastPage,
+		},
+	})
 }

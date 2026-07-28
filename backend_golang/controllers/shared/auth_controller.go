@@ -5,17 +5,19 @@ import (
 	"aureader/backend/dto"
 	"aureader/backend/helper"
 	"aureader/backend/middleware"
+	"aureader/backend/repositories"
 	"aureader/backend/services"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthController struct {
-	authSvc services.AuthService
+	authSvc  services.AuthService
+	userRepo repositories.UserRepository
 }
 
-func NewAuthController(authSvc services.AuthService) *AuthController {
-	return &AuthController{authSvc: authSvc}
+func NewAuthController(authSvc services.AuthService, userRepo repositories.UserRepository) *AuthController {
+	return &AuthController{authSvc: authSvc, userRepo: userRepo}
 }
 
 func (h *AuthController) Register(c *gin.Context) {
@@ -96,4 +98,32 @@ func (h *AuthController) LogoutAll(c *gin.Context) {
 	userID := uint64(middleware.GetUserID(c))
 	_ = h.authSvc.LogoutAll(userID)
 	helper.NoContent(c, "All sessions terminated")
+}
+
+// SwitchRole changes the current user's role between 'reader' and 'author'.
+// Body: {"role": "reader"|"author"}
+func (h *AuthController) SwitchRole(c *gin.Context) {
+	var req struct {
+		Role string `json:"role" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.UnprocessableEntity(c, "role is required")
+		return
+	}
+	if req.Role != "reader" && req.Role != "author" {
+		helper.BadRequest(c, "role must be 'reader' or 'author'", nil)
+		return
+	}
+	userID := uint64(middleware.GetUserID(c))
+	user, err := h.userRepo.FindByID(userID)
+	if err != nil {
+		controllers.HandleErr(c, err)
+		return
+	}
+	user.Role = req.Role
+	if err := h.userRepo.Update(user); err != nil {
+		controllers.HandleErr(c, err)
+		return
+	}
+	helper.OK(c, "Role switched", gin.H{"role": user.Role})
 }

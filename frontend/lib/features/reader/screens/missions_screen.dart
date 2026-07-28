@@ -11,6 +11,8 @@ class MissionsScreen extends StatefulWidget {
 
 class _MissionsScreenState extends State<MissionsScreen> with SingleTickerProviderStateMixin {
   bool _isLoading = true;
+  // Mission ids with an in-flight claim — blocks double-tap double-claim.
+  final Set<int> _claimingMissions = {};
   bool _hasError = false;
   List<dynamic> _dailyMissions = [];
   List<dynamic> _weeklyMissions = [];
@@ -113,6 +115,8 @@ class _MissionsScreenState extends State<MissionsScreen> with SingleTickerProvid
   }
 
   Future<void> _claimReward(int missionId) async {
+    if (_claimingMissions.contains(missionId)) return; // ignore re-taps mid-claim
+    _claimingMissions.add(missionId);
     try {
       final res = await ApiService.post(ApiEndpoints.claimMission(missionId.toString()), body: {});
 
@@ -137,6 +141,8 @@ class _MissionsScreenState extends State<MissionsScreen> with SingleTickerProvid
           context,
         ).showSnackBar(const SnackBar(content: Text('Failed to claim reward'), backgroundColor: Colors.red));
       }
+    } finally {
+      _claimingMissions.remove(missionId);
     }
   }
 

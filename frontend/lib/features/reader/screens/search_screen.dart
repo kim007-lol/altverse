@@ -149,12 +149,14 @@ class _SearchScreenState extends State<SearchScreen> {
 
       if (response.success) {
         final data = response.data;
+        // Pagination lives under `meta` in the Go backend envelope.
+        final meta = (data['meta'] as Map?) ?? const {};
         setState(() {
           _results = data['data'] ?? [];
           _userResults = data['users'] ?? [];
-          _totalResults = data['total'] ?? 0;
-          _currentPage = data['current_page'] ?? 1;
-          _lastPage = data['last_page'] ?? 1;
+          _totalResults = meta['total'] ?? 0;
+          _currentPage = meta['page'] ?? 1;
+          _lastPage = meta['last_page'] ?? 1;
         });
       }
     } catch (e) {
@@ -182,10 +184,11 @@ class _SearchScreenState extends State<SearchScreen> {
 
       if (response.success) {
         final data = response.data;
+        final meta = (data['meta'] as Map?) ?? const {};
         setState(() {
           _results.addAll(data['data'] ?? []);
-          _currentPage = data['current_page'] ?? _currentPage;
-          _lastPage = data['last_page'] ?? _lastPage;
+          _currentPage = meta['page'] ?? _currentPage;
+          _lastPage = meta['last_page'] ?? _lastPage;
         });
       }
     } catch (_) {}

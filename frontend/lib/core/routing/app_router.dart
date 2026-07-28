@@ -6,7 +6,6 @@ import '../../features/auth/screens/role_choice_screen.dart';
 import '../../features/auth/screens/author_onboarding_screen.dart';
 import '../../features/reader/screens/reading_screen.dart';
 import '../../features/shared/screens/notification_screen.dart';
-import '../../features/admin/screens/admin_dashboard_screen.dart';
 import '../../shared/widgets/master_screen.dart';
 
 class AppRouter {
@@ -50,10 +49,6 @@ class AppRouter {
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationScreen(),
-      ),
-      GoRoute(
-        path: '/admin-home',
-        builder: (context, state) => const AdminDashboardScreen(),
       ),
     ],
   );

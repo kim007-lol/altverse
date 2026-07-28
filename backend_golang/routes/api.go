@@ -9,22 +9,34 @@ import (
 	"aureader/backend/middleware"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type Controllers struct {
-	Auth       *sharedCtrl.AuthController
-	Profile    *readerCtrl.ProfileController
-	Discover   *readerCtrl.DiscoverController
-	Reading    *readerCtrl.ReadingController
-	Social     *readerCtrl.SocialController
-	Wallet     *readerCtrl.WalletController
-	AuthSeries *authorCtrl.SeriesController
-	AuthEp     *authorCtrl.EpisodeController
-	AdminWd    *adminCtrl.WithdrawalController
-	Gam        *gamCtrl.Controller
-	Image      *sharedCtrl.ImageProxyController
-	Notif      *readerCtrl.NotificationController
-	Unlock     *readerCtrl.UnlockController
+	Auth          *sharedCtrl.AuthController
+	Profile       *readerCtrl.ProfileController
+	Discover      *readerCtrl.DiscoverController
+	Reading       *readerCtrl.ReadingController
+	Social        *readerCtrl.SocialController
+	Wallet        *readerCtrl.WalletController
+	AuthSeries    *authorCtrl.SeriesController
+	AuthEp        *authorCtrl.EpisodeController
+	AdminWd        *adminCtrl.WithdrawalController
+	AdminDash      *adminCtrl.DashboardController
+	AdminUser      *adminCtrl.UserController
+	AdminContent   *adminCtrl.ContentController
+	AdminReport    *adminCtrl.ReportController
+	AdminSettings  *adminCtrl.SettingsController
+	AdminCoin      *adminCtrl.CoinController
+	AdminBroadcast *adminCtrl.BroadcastController
+	AdminAudit     *adminCtrl.AuditController
+	AdminSeason    *adminCtrl.SeasonController
+	AdminFinance   *adminCtrl.FinanceController
+	Gam            *gamCtrl.Controller
+	DB             *gorm.DB
+	Image         *sharedCtrl.ImageProxyController
+	Notif         *readerCtrl.NotificationController
+	Unlock        *readerCtrl.UnlockController
 }
 
 func Register(r *gin.Engine, ctrl Controllers) {
@@ -106,9 +118,35 @@ func Register(r *gin.Engine, ctrl Controllers) {
 		authed.GET("/wallet", ctrl.Wallet.GetWalletSummary)
 		authed.GET("/reader/topup/history", ctrl.Wallet.GetTransactions)
 		authed.POST("/reader/topup/create", ctrl.Wallet.CreateTopUp)
+		authed.GET("/reader/topup/packages", ctrl.Wallet.GetTopupPackages)
+		authed.POST("/wallet/tip", ctrl.Wallet.SendTip)
+		authed.GET("/wallet/daily-status", ctrl.Wallet.GetDailyStatus)
+		authed.POST("/wallet/daily-reward", ctrl.Wallet.ClaimDailyReward)
 
-		// Reader profile
+		// Auth extras
+		authed.POST("/auth/switch-role", ctrl.Auth.SwitchRole)
+
+		// Reader profile (self + public)
 		authed.GET("/reader/profile", ctrl.Profile.Me)
+		authed.GET("/reader/profile/:userId", ctrl.Discover.GetPublicReaderProfile)
+
+		// Reader home FYP
+		authed.GET("/reader/fyp", ctrl.Discover.GetFYP)
+
+		// Reader author public profile
+		authed.GET("/reader/author/:id/profile", ctrl.Discover.GetAuthorProfile)
+
+		// Reader search + suggestions + history
+		authed.GET("/reader/search", ctrl.Discover.Search)
+		authed.GET("/reader/search/suggestions", ctrl.Discover.GetSearchSuggestions)
+		authed.GET("/reader/search/history", ctrl.Discover.GetSearchHistory)
+		authed.DELETE("/reader/search/history", ctrl.Discover.ClearSearchHistory)
+
+		// Reader my comments
+		authed.GET("/reader/my-comments", ctrl.Social.GetMyComments)
+
+		// Comment like toggle
+		authed.POST("/comments/:id/like", ctrl.Social.ToggleCommentLike)
 
 		// Reader reading & content
 		authed.GET("/reader/history", ctrl.Reading.GetHistory)
@@ -136,7 +174,22 @@ func Register(r *gin.Engine, ctrl Controllers) {
 		// Gamification aliases
 		authed.GET("/missions", ctrl.Gam.GetMissions)
 		authed.POST("/missions/:missionId/claim", ctrl.Gam.ClaimMissionByParam)
+		authed.POST("/missions/claim-all", ctrl.Gam.ClaimAllMissions)
 		authed.GET("/leaderboard/top-xp", ctrl.Gam.GetCurrentLeaderboard)
+		authed.GET("/leaderboard/overview", ctrl.Gam.GetLeaderboardOverview)
+		authed.GET("/leaderboard/top-supporters", ctrl.Gam.GetTopSupporters)
+		authed.GET("/leaderboard/top-authors", ctrl.Gam.GetTopAuthors)
+
+		// Badges (Flutter contract: /wallet/badges + /users/badges/:id/pin)
+		authed.GET("/wallet/badges", ctrl.Gam.GetWalletBadges)
+		authed.POST("/users/badges/:id/pin", ctrl.Gam.PinBadge)
+
+		// Tier progress
+		authed.GET("/wallet/tier-progress", ctrl.Gam.GetTierProgress)
+
+		// Reports (user's own submissions)
+		authed.GET("/reports", ctrl.Social.GetMyReports)
+		authed.DELETE("/reports/:id", ctrl.Social.DeleteReport)
 
 		// ── Notifications ────────────────────────────────────────────────────
 		authed.GET("/notifications", ctrl.Notif.List)
@@ -170,10 +223,7 @@ func Register(r *gin.Engine, ctrl Controllers) {
 
 	// ── Admin ─────────────────────────────────────────────────────────────────
 	adminGroup := v1.Group("/admin", middleware.Auth(), middleware.AdminOnly())
-	{
-		adminGroup.GET("/withdrawals", ctrl.AdminWd.ListPending)
-		adminGroup.POST("/withdrawals/:id/process", ctrl.AdminWd.Process)
-	}
+	RegisterAdminRoutes(adminGroup, ctrl, ctrl.DB)
 
 	// ── Gamification ─────────────────────────────────────────────────────────
 	gam := v1.Group("/gamification", middleware.Auth())
